@@ -18,9 +18,7 @@
 	import { fade } from 'svelte/transition';
 </script>
 
-<svelte:head>
-	<title>Project Details | Investika</title>
-</svelte:head>
+
 
 <div class="min-h-screen bg-slate-50 font-sans pb-24" in:fade={{ duration: 300 }}>
 	<!-- Hero Header -->

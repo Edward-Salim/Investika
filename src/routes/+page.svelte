@@ -446,9 +446,7 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Investika | AI Investment Concierge</title>
-</svelte:head>
+
 
 <!-- Full-height column layout: projects fill top, search bar fixed at bottom -->
 <div class="w-full h-full flex flex-col overflow-hidden">

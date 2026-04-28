@@ -16,9 +16,7 @@
 	let searchQuery = $state('');
 </script>
 
-<svelte:head>
-	<title>{m.policy_title()} | Investika</title>
-</svelte:head>
+
 
 <div class="min-h-screen bg-slate-50 font-sans pb-24" in:fade={{ duration: 300 }}>
 	<!-- Hero Header -->

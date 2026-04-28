@@ -3,9 +3,7 @@
 	import { fly } from 'svelte/transition';
 </script>
 
-<svelte:head>
-	<title>Regions | Investika</title>
-</svelte:head>
+
 
 <div class="flex-1 flex min-h-0 bg-[#fbfbfb] overflow-y-auto p-8 lg:p-16 items-center justify-center">
 	
