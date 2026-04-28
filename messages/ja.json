@@ -172,5 +172,7 @@
 	"filter_pre_fs": "事前 FS",
 	"filter_preliminary": "準備段階",
 	"card_investment": "投資額",
-	"card_yield": "目標利回り"
+	"card_yield": "目標利回り",
+	"sector_tech": "テクノロジー",
+	"sector_tech_sub": "AI & デジタル"
 }

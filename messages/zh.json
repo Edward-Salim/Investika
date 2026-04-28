@@ -172,5 +172,7 @@
 	"filter_pre_fs": "预可行性研究",
 	"filter_preliminary": "初步阶段",
 	"card_investment": "投资额",
-	"card_yield": "目标收益"
+	"card_yield": "目标收益",
+	"sector_tech": "技术",
+	"sector_tech_sub": "人工智能与数字"
 }

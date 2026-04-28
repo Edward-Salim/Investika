@@ -172,5 +172,7 @@
 	"filter_pre_fs": "Pre-FS",
 	"filter_preliminary": "Preliminary",
 	"card_investment": "Investment",
-	"card_yield": "Target Yield"
+	"card_yield": "Target Yield",
+	"sector_tech": "TECHNOLOGY",
+	"sector_tech_sub": "AI & DIGITAL"
 }
