@@ -6,4 +6,9 @@ export const task = pgTable('task', {
 	priority: integer('priority').notNull().default(1)
 });
 
+export const countries = pgTable('countries', {
+	id: serial('id').primaryKey(),
+	name: text('name').notNull()
+});
+
 export * from './auth.schema';

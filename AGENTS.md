@@ -25,3 +25,8 @@ To maintain a clean and readable project history, we use **Conventional Commits*
 
 ---
 *Note: Always use lowercase for the type and description. Keep the description concise.*
+
+## Development Focus (Current Phase)
+- **Frontend Prototype First**: Focus strictly on hardcoded frontend prototypes and UI/UX design.
+- **No Backend Logic**: Do not implement or modify backend logic, database schemas, or API endpoints for now.
+- **Design Aspect**: The current priority is the design aspect and visual excellence. Hardcode all data and interactions until the design is finalized.
