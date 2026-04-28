@@ -33,6 +33,7 @@
 </script>
 
 <svelte:head>
+	<title>Investika</title>
 	<link rel="icon" type="image/png" href={investikaBlue} />
 	<link rel="apple-touch-icon" href={investikaBlue} />
 </svelte:head>
