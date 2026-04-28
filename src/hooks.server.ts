@@ -19,6 +19,11 @@ const handleParaglide: Handle = ({ event, resolve }) =>
 	});
 
 const handleBetterAuth: Handle = async ({ event, resolve }) => {
+	// Skip auth logic if auth is not initialized (e.g. missing DATABASE_URL)
+	if (!auth) {
+		return resolve(event);
+	}
+
 	const session = await auth.api.getSession({ headers: event.request.headers });
 
 	if (session) {
