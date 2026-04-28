@@ -21,35 +21,52 @@
 
 
 <div class="min-h-screen bg-slate-50 font-sans pb-24" in:fade={{ duration: 300 }}>
-	<!-- Hero Header -->
-	<div class="bg-white border-b border-slate-200">
-		<div class="max-w-7xl mx-auto px-6 lg:px-8 py-8 md:py-12">
-			<a href="/" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-bkpm-blue transition-colors uppercase tracking-wide mb-6">
+	<!-- Immersive Hero Image Section -->
+	<div class="h-[40vh] md:h-[50vh] w-full relative overflow-hidden bg-slate-900">
+		<img 
+			src="https://images.unsplash.com/photo-1590487988256-9ed24133863e?auto=format&fit=crop&q=80&w=2000" 
+			alt="Project Hero" 
+			class="w-full h-full object-cover opacity-60"
+		/>
+		<div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
+		
+		<div class="absolute top-8 left-8">
+			<a href="/" class="inline-flex items-center text-xs font-black text-white/80 hover:text-white transition-colors uppercase tracking-widest px-4 py-2 bg-black/20 backdrop-blur-md rounded-xl border border-white/10">
 				<ArrowLeft size={14} strokeWidth={3} class="mr-2" />
 				{m.proj_back()}
 			</a>
-			
-			<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+		</div>
+
+		<div class="absolute bottom-0 left-0 w-full p-8 md:p-12">
+			<div class="max-w-7xl mx-auto">
+				<div class="flex flex-wrap items-center gap-3 mb-6">
+					<span class="px-3 py-1 rounded-full bg-logo-green text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-logo-green/20">{m.proj_tag_1()}</span>
+					<span class="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest border border-white/20">{m.proj_tag_2()}</span>
+					<span class="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest border border-white/20">{m.proj_tag_3()}</span>
+				</div>
+				<h1 class="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight mb-4 drop-shadow-2xl">
+					{m.proj_dummy_title()}
+				</h1>
+			</div>
+		</div>
+	</div>
+
+	<!-- Project Header Meta -->
+	<div class="bg-white border-b border-slate-200">
+		<div class="max-w-7xl mx-auto px-6 lg:px-8 py-8 md:py-10">
+			<div class="flex flex-col md:flex-row md:items-center justify-between gap-8">
 				<div class="max-w-3xl">
-					<div class="flex flex-wrap items-center gap-3 mb-4">
-						<span class="px-3 py-1 rounded-full bg-logo-green/10 text-logo-green text-xs font-black uppercase tracking-wide border border-logo-green/20">{m.proj_tag_1()}</span>
-						<span class="px-3 py-1 rounded-full bg-bkpm-blue/10 text-bkpm-blue text-xs font-black uppercase tracking-wide border border-bkpm-blue/20">{m.proj_tag_2()}</span>
-						<span class="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-black uppercase tracking-wide border border-slate-200">{m.proj_tag_3()}</span>
-					</div>
-					<h1 class="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-tight mb-4">
-						{m.proj_dummy_title()}
-					</h1>
-					<p class="text-lg md:text-xl font-medium text-slate-500 leading-relaxed">
+					<p class="text-xl font-medium text-slate-500 leading-relaxed italic border-l-4 border-bkpm-blue pl-6">
 						{m.proj_dummy_desc()}
 					</p>
 				</div>
 				
 				<div class="flex items-center space-x-3 shrink-0">
-					<button class="p-3 rounded-xl border-2 border-slate-200 text-slate-400 hover:text-bkpm-blue hover:border-bkpm-blue transition-colors bg-white cursor-pointer">
+					<button class="p-4 rounded-2xl border border-slate-200 text-slate-400 hover:text-bkpm-blue hover:border-bkpm-blue transition-all bg-white cursor-pointer shadow-sm">
 						<Share2 size={20} strokeWidth={2.5} />
 					</button>
-					<button class="flex items-center space-x-2 px-6 py-3 bg-bkpm-blue text-white rounded-xl font-black uppercase text-xs tracking-wide shadow-lg shadow-bkpm-blue/20 hover:bg-bkpm-blue/90 transition-colors cursor-pointer">
-						<Download size={16} strokeWidth={3} />
+					<button class="flex items-center space-x-3 px-8 py-4 bg-bkpm-blue text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-xl shadow-bkpm-blue/30 hover:bg-bkpm-blue/90 hover:-translate-y-0.5 transition-all cursor-pointer">
+						<Download size={18} strokeWidth={3} />
 						<span>{m.proj_download()}</span>
 					</button>
 				</div>

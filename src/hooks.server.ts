@@ -36,8 +36,12 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 
 	// Protected routes logic
 	const pathname = event.url.pathname;
-	// Allow login, api/auth, and any public assets/files
-	const isPublicPath = pathname.endsWith('/login') || 
+	const isPublicPath = pathname === '/' ||
+						 pathname === '/id' ||
+						 pathname === '/zh' ||
+						 pathname === '/ja' ||
+						 pathname === '/ko' ||
+						 pathname.endsWith('/login') || 
 						 pathname.includes('/api/auth') || 
 						 pathname.includes('.') || // Static files
 						 pathname.startsWith('/_app');

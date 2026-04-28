@@ -94,7 +94,7 @@
 		</div>
 
 		<!-- RIGHT MAP AREA -->
-		<div class="relative w-full max-w-[700px] aspect-square rounded-full bg-[#f6f6f6] shadow-inner flex items-center justify-center overflow-hidden" in:fly={{ opacity: 0, scale: 0.95, duration: 1000, delay: 200 }}>
+		<div class="relative w-full max-w-[700px] aspect-square rounded-full bg-[#f6f6f6] shadow-inner flex items-center justify-center overflow-hidden" in:fly={{ opacity: 0, x: 20, duration: 1000, delay: 200 }}>
 			<!-- Abstract world map backdrop (light grey shapes) -->
 			<div class="absolute inset-0 opacity-20 bg-[url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/World_map_blank_without_borders.svg/1024px-World_map_blank_without_borders.svg.png')] bg-cover bg-center bg-no-repeat grayscale" style="background-size: 150%; background-position: 70% 60%;"></div>
 

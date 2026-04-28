@@ -42,17 +42,20 @@ To maintain a clean and readable project history, we use **Conventional Commits*
 **IMPORTANT — Always follow these conventions for asset placement:**
 
 ### `src/lib/assets/` — All images and media
+
 - Place **all** images, icons, logos, fonts, and other media here.
 - Files are processed by **Vite** (hashed, optimized, tree-shaken).
 - Import them in components: `import logo from '$lib/assets/logo.png'`
 - Subdirectories are encouraged: `logos/`, `images/`, `icons/`
 
 ### `static/` — Root-level served files ONLY
+
 - **Only use `static/` for files that must be served at a fixed root URL.**
 - Acceptable files: `favicon.ico`, `robots.txt`, `sitemap.xml`, `manifest.json`, `.well-known/`
 - **DO NOT place regular images or logos here.** They bypass Vite's asset pipeline, miss hashing, and bloat the build.
 - PNG/SVG favicons should be imported from `lib/assets/` and injected via `<svelte:head>` in `+layout.svelte`.
 
 ### Rule of thumb
+
 > If you're writing `import x from '...'` for it — it belongs in `src/lib/assets/`.  
 > If it needs to be accessed as `/filename.ext` with no hashing — it goes in `static/`.

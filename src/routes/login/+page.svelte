@@ -1,11 +1,17 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
-	import { setLocale, getLocale } from '$lib/paraglide/runtime.js';
+	import { setLocale, getLocale, localizeUrl } from '$lib/paraglide/runtime.js';
 	import { fade, fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import { Loader2, ShieldCheck, TrendingUp, Landmark, ChevronDown, ArrowRight, Check } from 'lucide-svelte';
 	import { Gb, Id, Cn, Jp, Kr } from 'svelte-flag-icons';
+	import logoWhite from '$lib/assets/investika-white.png';
 	import bkpmEmblem from '$lib/assets/logos/bkpm-emblem.png';
+	import aiIncubation from '$lib/assets/logos/ai-incubation.png';
+	import bkpmLogo from '$lib/assets/logos/bkpm-logo.png';
+	import britishEmbassy from '$lib/assets/logos/british-embassy.png';
+	import ukDev from '$lib/assets/logos/uk-dev.png';
+	import ukIdTechHub from '$lib/assets/logos/uk-id-tech-hub.png';
 	
 	let email = $state('');
 	let password = $state('');
@@ -14,8 +20,9 @@
 
 	function changeLanguage(lang: "en" | "id" | "zh" | "ja" | "ko") {
 		setLocale(lang);
-		// Simple reload to apply Paraglide JS changes across the app
-		window.location.reload();
+		// Localize current URL to preserve page
+		const newUrl = localizeUrl(window.location.href, { locale: lang });
+		window.location.href = newUrl.href;
 	}
 
 	function handleLogin(e: Event) {
@@ -46,11 +53,14 @@
 		</div>
 		
 		<div class="relative z-10 p-12 text-white max-w-xl">
-			<img 
-				src={bkpmEmblem} 
-				alt="BKPM Emblem" 
-				class="h-32 w-auto mb-8 brightness-0 invert"
-			/>
+			<div class="flex items-center space-x-2 mb-8">
+				<img 
+					src={logoWhite} 
+					alt="Investika" 
+					class="h-12 w-auto brightness-0 invert"
+				/>
+				<span class="text-2xl font-black tracking-tighter text-white uppercase">Investika</span>
+			</div>
 			<h1 class="text-5xl font-black tracking-tighter leading-tight mb-6">
 				{m.login_hero_title1()} <span class="text-logo-green">{m.login_hero_title2()}</span> {m.login_hero_title3()}
 			</h1>
@@ -81,7 +91,7 @@
 	</div>
 
 	<!-- Right Side: Login Form -->
-	<div class="w-full lg:w-1/2 flex flex-col justify-center px-8 md:px-24 lg:px-32 bg-slate-50/50 relative">
+	<div class="w-full lg:w-1/2 flex flex-col bg-slate-50/50 relative">
 		
 		<!-- Language Dropdown Selector (Absolute Top Right) -->
 		<div class="absolute top-8 right-8 z-50">
@@ -146,81 +156,127 @@
 			</div>
 		</div>
 
-		<div class="max-w-md w-full mx-auto" in:fly={{ y: 20, duration: 800 }}>
-			<div class="lg:hidden mb-12">
-				<img src={bkpmEmblem} alt="BKPM Emblem" class="h-16 w-auto" />
-			</div>
-
-			<div class="mb-10">
-				<h2 class="text-3xl font-black text-slate-900 tracking-tight mb-1">{m.login_welcome()}</h2>
-				<p class="text-slate-500 font-medium">{m.login_subtitle()}</p>
-			</div>
-
-			<form onsubmit={handleLogin} class="space-y-5" novalidate>
-				<div class="space-y-1.5">
-					<label for="email" class="text-[10px] font-black uppercase tracking-tight block px-1 text-slate-400">{m.login_email_label()}</label>
-					<input 
-						id="email"
-						type="email" 
-						bind:value={email}
-						placeholder={m.login_email_placeholder()}
-						class="w-full px-5 py-3.5 rounded-xl bg-white border border-slate-200 focus:border-bkpm-blue focus:ring-4 focus:ring-bkpm-blue/5 transition-all outline-none font-bold text-slate-800 text-sm cursor-text placeholder:text-slate-300"
-					/>
-				</div>
-
-				<div class="space-y-1.5">
-					<div class="flex justify-between items-end px-1">
-						<label for="password" class="text-[10px] font-black uppercase tracking-tight text-slate-400">{m.login_pass_label()}</label>
-						<a href="/forgot-password" class="text-[10px] font-black uppercase tracking-tight text-bkpm-blue hover:text-logo-green transition-colors cursor-pointer">{m.login_forgot()}</a>
+		<!-- Main Form Content (Absolute Centered) -->
+		<div class="absolute inset-0 flex flex-col items-center justify-center px-4 pointer-events-none">
+			<div class="max-w-md w-full mx-auto pointer-events-auto" in:fly={{ y: 20, duration: 800 }}>
+				<div class="lg:hidden mb-12">
+					<div class="flex items-center space-x-1.5">
+						<img src={logoWhite} alt="Investika" class="h-10 w-auto brightness-0" />
+						<span class="text-xl font-black tracking-tighter text-slate-900 uppercase">Investika</span>
 					</div>
-					<input 
-						id="password"
-						type="password" 
-						bind:value={password}
-						placeholder="••••••••"
-						class="w-full px-5 py-3.5 rounded-xl bg-white border border-slate-200 focus:border-bkpm-blue focus:ring-4 focus:ring-bkpm-blue/5 transition-all outline-none font-bold text-slate-800 tracking-wide text-sm cursor-text placeholder:text-slate-300"
-					/>
 				</div>
 
-				<div class="flex items-center space-x-3 px-1 group cursor-pointer">
-					<div class="relative w-5 h-5 flex items-center justify-center shrink-0">
+				<div class="mb-10">
+					<h2 class="text-3xl font-black text-slate-900 tracking-tight mb-1">{m.login_welcome()}</h2>
+					<p class="text-slate-500 font-medium">{m.login_subtitle()}</p>
+				</div>
+
+				<form onsubmit={handleLogin} class="space-y-5" novalidate>
+					<div class="space-y-1.5">
+						<label for="email" class="text-[10px] font-black uppercase tracking-tight block px-1 text-slate-400">{m.login_email_label()}</label>
 						<input 
-							type="checkbox" 
-							id="remember" 
-							class="peer appearance-none w-full h-full rounded-md border-2 border-slate-200 checked:bg-bkpm-blue checked:border-bkpm-blue transition-all cursor-pointer" 
-						/>
-						<Check 
-							size={12} 
-							strokeWidth={4} 
-							class="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" 
+							id="email"
+							type="email" 
+							bind:value={email}
+							placeholder={m.login_email_placeholder()}
+							class="w-full px-5 py-3.5 rounded-xl bg-white border border-slate-200 focus:border-bkpm-blue focus:ring-4 focus:ring-bkpm-blue/5 transition-all outline-none font-bold text-slate-800 text-sm cursor-text placeholder:text-slate-300"
 						/>
 					</div>
-					<label for="remember" class="text-xs font-bold text-slate-500 cursor-pointer select-none group-hover:text-slate-700 transition-colors">{m.login_remember()}</label>
+
+					<div class="space-y-1.5">
+						<div class="flex justify-between items-end px-1">
+							<label for="password" class="text-[10px] font-black uppercase tracking-tight text-slate-400">{m.login_pass_label()}</label>
+							<a href="/forgot-password" class="text-[10px] font-black uppercase tracking-tight text-bkpm-blue hover:text-logo-green transition-colors cursor-pointer">{m.login_forgot()}</a>
+						</div>
+						<input 
+							id="password"
+							type="password" 
+							bind:value={password}
+							placeholder="••••••••"
+							class="w-full px-5 py-3.5 rounded-xl bg-white border border-slate-200 focus:border-bkpm-blue focus:ring-4 focus:ring-bkpm-blue/5 transition-all outline-none font-bold text-slate-800 tracking-wide text-sm cursor-text placeholder:text-slate-300"
+						/>
+					</div>
+
+					<div class="flex items-center space-x-3 px-1 group cursor-pointer">
+						<div class="relative w-5 h-5 flex items-center justify-center shrink-0">
+							<input 
+								type="checkbox" 
+								id="remember" 
+								class="peer appearance-none w-full h-full rounded-md border-2 border-slate-200 checked:bg-bkpm-blue checked:border-bkpm-blue transition-all cursor-pointer" 
+							/>
+							<Check 
+								size={12} 
+								strokeWidth={4} 
+								class="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" 
+							/>
+						</div>
+						<label for="remember" class="text-xs font-bold text-slate-500 cursor-pointer select-none group-hover:text-slate-700 transition-colors">{m.login_remember()}</label>
+					</div>
+
+					<button 
+						type="submit" 
+						class="w-full relative py-4 mt-4 bg-bkpm-blue text-white rounded-xl font-black uppercase text-xs tracking-wide shadow-xl shadow-bkpm-blue/30 hover:bg-bkpm-blue/90 hover:-translate-y-0.5 transition-all overflow-hidden cursor-pointer"
+						disabled={isLoading}
+					>
+						{#if isLoading}
+							<div class="flex items-center justify-center space-x-2" in:fade>
+								<Loader2 size={16} class="animate-spin" />
+								<span>{m.login_btn_loading()}</span>
+							</div>
+						{:else}
+							<div class="flex items-center justify-center space-x-2" in:fade>
+								<span>{m.login_btn_submit()}</span>
+								<ArrowRight size={16} strokeWidth={3} />
+							</div>
+						{/if}
+					</button>
+				</form>
+
+				<div class="mt-4 flex items-center justify-center space-x-2">
+					<span class="text-xs font-bold text-slate-400">{m.login_new_to()}</span>
+					<a href="/register" class="text-xs font-black text-bkpm-blue hover:underline cursor-pointer">{m.login_req_access()}</a>
 				</div>
+			</div>
+		</div>
 
-				<button 
-					type="submit" 
-					class="w-full relative py-4 mt-8 bg-bkpm-blue text-white rounded-xl font-black uppercase text-xs tracking-wide shadow-xl shadow-bkpm-blue/30 hover:bg-bkpm-blue/90 hover:-translate-y-0.5 transition-all overflow-hidden cursor-pointer"
-					disabled={isLoading}
-				>
-					{#if isLoading}
-						<div class="flex items-center justify-center space-x-2" in:fade>
-							<Loader2 size={16} class="animate-spin" />
-							<span>{m.login_btn_loading()}</span>
-						</div>
-					{:else}
-						<div class="flex items-center justify-center space-x-2" in:fade>
-							<span>{m.login_btn_submit()}</span>
-							<ArrowRight size={16} strokeWidth={3} />
-						</div>
-					{/if}
-				</button>
-			</form>
-
-			<div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-center space-x-2">
-				<span class="text-xs font-bold text-slate-400">{m.login_new_to()}</span>
-				<a href="/register" class="text-xs font-black text-bkpm-blue hover:underline cursor-pointer">{m.login_req_access()}</a>
+		<!-- Partners Section (Absolute Bottom) -->
+		<div class="absolute bottom-0 left-0 right-0 py-8 border-t border-slate-100/60 overflow-hidden bg-slate-50/50">
+			<div class="max-w-4xl mx-auto px-8 overflow-hidden flex items-center space-x-8">
+				<span class="text-[9px] font-black text-slate-300 uppercase tracking-widest whitespace-nowrap shrink-0">{m.nav_partnership()}</span>
+				<div class="relative flex-1 overflow-hidden">
+					<div class="flex items-center space-x-12 animate-carousel grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-500 whitespace-nowrap">
+						{#each [
+							{ src: aiIncubation, alt: 'AI Incubation', h: 'h-6' },
+							{ src: bkpmLogo, alt: 'BKPM', h: 'h-10' },
+							{ src: britishEmbassy, alt: 'British Embassy', h: 'h-12' },
+							{ src: ukDev, alt: 'UK Development', h: 'h-6' },
+							{ src: ukIdTechHub, alt: 'UK-ID Tech Hub', h: 'h-8' },
+							{ src: aiIncubation, alt: 'AI Incubation', h: 'h-6' },
+							{ src: bkpmLogo, alt: 'BKPM', h: 'h-10' },
+							{ src: britishEmbassy, alt: 'British Embassy', h: 'h-12' },
+							{ src: ukDev, alt: 'UK Development', h: 'h-6' },
+							{ src: ukIdTechHub, alt: 'UK-ID Tech Hub', h: 'h-8' }
+						] as logo}
+							<img src={logo.src} alt={logo.alt} class="{logo.h} w-auto inline-block shrink-0" />
+						{/each}
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
 </div>
+
+<style>
+	@keyframes carousel {
+		0% { transform: translateX(0); }
+		100% { transform: translateX(-50%); }
+	}
+	.animate-carousel {
+		display: flex;
+		width: fit-content;
+		animation: carousel 10s linear infinite;
+	}
+	.animate-carousel:hover {
+		animation-play-state: paused;
+	}
+</style>

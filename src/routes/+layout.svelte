@@ -1,11 +1,12 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
-	import { setLocale, getLocale } from '$lib/paraglide/runtime.js';
+	import { setLocale, getLocale, localizeUrl } from '$lib/paraglide/runtime.js';
 	
 	function changeLanguage(lang: "en" | "id" | "zh" | "ja" | "ko") {
 		setLocale(lang);
-		// Simple reload to apply Paraglide JS changes across the app
-		window.location.reload();
+		// Localize the current URL and navigate to it to preserve the page
+		const newUrl = localizeUrl(window.location.href, { locale: lang });
+		window.location.href = newUrl.href;
 	}
 
 	import './layout.css';
@@ -13,6 +14,7 @@
 	import { Home, Menu, User, ChevronDown, BookOpen, Map, LogOut, ArrowRight } from 'lucide-svelte';
 	import { page } from '$app/state';
 	import { settingsStore } from '$lib/state/settings.svelte.js';
+	import { searchStore } from '$lib/state/search.svelte.js';
 	import logoWhite from '$lib/assets/investika-white.png';
 	import investikaBlue from '$lib/assets/investika-blue.png';
 	import aiIncubation from '$lib/assets/logos/ai-incubation.png';
@@ -52,32 +54,40 @@
 	>
 		<!-- Logo Area -->
 		<div class="flex h-16 items-center px-4 whitespace-nowrap mb-2 mt-2">
-			<div class="flex items-center">
+			<button 
+				class="flex items-center group cursor-pointer border-none bg-transparent p-0 focus:outline-none" 
+				onclick={() => { 
+					searchStore.resetSearch(); 
+					if (window.location.pathname !== '/') window.location.href = '/';
+				}}
+			>
 				<img 
 					src={logoWhite} 
 					alt="Investika" 
-					class="h-11 w-auto brightness-0 invert transition-all duration-300"
+					class="h-11 w-auto brightness-0 invert transition-all duration-300 group-hover:scale-105"
 					class:mr-2.5={isSidebarOpen}
 				/>
 				<span class="text-xl font-black tracking-tighter text-white transition-opacity duration-300 overflow-hidden uppercase" 
 					class:opacity-0={!isSidebarOpen}
 					class:w-0={!isSidebarOpen}>Investika</span>
-			</div>
+			</button>
 		</div>
 
 		<!-- Nav -->
 		<nav class="mt-1 flex-1 space-y-1 px-2.5 overflow-hidden">
 			<a
-				href="/"
+				href={localizeUrl('/', { locale: getLocale() }).pathname}
 				title="Home"
-				class="group flex items-center rounded-xl bg-white/10 px-3.5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white/20 whitespace-nowrap"
+				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
+					{page.url.pathname === '/' || page.url.pathname.match(/^\/(id|zh|ja|ko)$/) ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
 				class:px-0={!isSidebarOpen}
 			>
 				<Home
 					size={18}
 					strokeWidth={2.5}
-					class="shrink-0 transition-colors text-white/70 group-hover:text-white {!isSidebarOpen ? '' : 'mr-3'}"
+					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
+						{page.url.pathname === '/' || page.url.pathname.match(/^\/(id|zh|ja|ko)$/) ? 'text-white' : 'text-white/70 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					{m.nav_overview()}
@@ -86,14 +96,16 @@
 			<a
 				href="/policies"
 				title="Policies"
-				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white/70 transition-all hover:bg-white/10 hover:text-white whitespace-nowrap"
+				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
+					{page.url.pathname === '/policies' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
 				class:px-0={!isSidebarOpen}
 			>
 				<BookOpen
 					size={18}
 					strokeWidth={2.5}
-					class="shrink-0 transition-colors text-white/50 group-hover:text-white {!isSidebarOpen ? '' : 'mr-3'}"
+					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
+						{page.url.pathname === '/policies' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					{m.nav_policies()}
@@ -102,14 +114,16 @@
 			<a
 				href="/regions"
 				title="Regions"
-				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold text-white/70 transition-all hover:bg-white/10 hover:text-white whitespace-nowrap"
+				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
+					{page.url.pathname === '/regions' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
 				class:px-0={!isSidebarOpen}
 			>
 				<Map
 					size={18}
 					strokeWidth={2.5}
-					class="shrink-0 transition-colors text-white/50 group-hover:text-white {!isSidebarOpen ? '' : 'mr-3'}"
+					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
+						{page.url.pathname === '/regions' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					Regions
