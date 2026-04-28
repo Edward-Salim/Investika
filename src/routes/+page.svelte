@@ -1,11 +1,13 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
-	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, ChevronUp } from 'lucide-svelte';
+	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, ChevronUp, LayoutGrid, Truck, Sprout, Cpu, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope } from 'lucide-svelte';
 	import { fade, fly, slide } from 'svelte/transition';
 	import { cubicOut, cubicInOut } from 'svelte/easing';
 	import bkpmEmblem from '$lib/assets/logos/bkpm-emblem.png';
 	import AuroraBackground from '$lib/components/AuroraBackground.svelte';
 	import { searchStore } from '$lib/state/search.svelte.js';
+	import { settingsStore } from '$lib/state/settings.svelte.js';
+	import { getLocale } from '$lib/paraglide/runtime.js';
 
 	let inputValue = $state(searchStore.inputValue);
 	let aiSummary = $state(searchStore.aiSummary);
@@ -13,6 +15,8 @@
 	let isSearching = $state(searchStore.isSearching);
 	let activeFilter = $state(searchStore.activeFilter);
 	let isFilterOpen = $state(searchStore.isFilterOpen);
+	let isSectorDropdownOpen = $state(false);
+	let committedSearch = $state(''); // Only updates on submit, not on every keystroke
 	
 	let collapseTimeout: ReturnType<typeof setTimeout>;
 
@@ -21,7 +25,35 @@
 	let maxInvestment = $state(searchStore.maxInvestment);
 	let selectedStatuses = $state<string[]>(searchStore.selectedStatuses);
 	let selectedRegions = $state<string[]>(searchStore.selectedRegions);
-	let sortBy = $state<'default' | 'investment-asc' | 'investment-desc' | 'alpha'>(searchStore.sortBy);
+	let selectedESG = $state<string[]>(searchStore.selectedESG);
+	let minIRR = $state(searchStore.minIRR);
+	let maxIRR = $state(searchStore.maxIRR);
+	let riskProfile = $state<'all' | 'conservative' | 'balanced' | 'aggressive'>(searchStore.riskProfile);
+	let sortBy = $state<'default' | 'investment-asc' | 'investment-desc' | 'alpha' | 'irr-desc' | 'esg-asc'>(searchStore.sortBy);
+
+	function formatInvestment(raw: string | number) {
+		// Parse "$120M" → 120 or pass through plain numbers
+		const usdMillions = typeof raw === 'number' ? raw : parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+		if (isNaN(usdMillions)) return String(raw);
+
+		if (!settingsStore.followLanguageCurrency) {
+			return `$${usdMillions.toLocaleString()}M`;
+		}
+		
+		const lang = getLocale();
+		switch (lang) {
+			case 'id':
+				return `Rp ${(usdMillions * 0.016).toFixed(1)}T`;
+			case 'zh':
+				return `¥ ${(usdMillions * 0.0072).toFixed(1)}B`;
+			case 'ja':
+				return `¥ ${(usdMillions * 0.15).toFixed(1)}B`;
+			case 'ko':
+				return `₩ ${(usdMillions * 0.00135).toFixed(2)}T`;
+			default:
+				return `$${usdMillions.toLocaleString()}M`;
+		}
+	}
 
 	$effect(() => {
 		searchStore.inputValue = inputValue;
@@ -34,6 +66,10 @@
 		searchStore.maxInvestment = maxInvestment;
 		searchStore.selectedStatuses = selectedStatuses;
 		searchStore.selectedRegions = selectedRegions;
+		searchStore.selectedESG = selectedESG;
+		searchStore.minIRR = minIRR;
+		searchStore.maxIRR = maxIRR;
+		searchStore.riskProfile = riskProfile;
 		searchStore.sortBy = sortBy;
 	});
 
@@ -46,16 +82,58 @@
 		clearAdvancedFilters();
 	}
 
-	const filters = ['All', 'Energy', 'Logistics', 'Agriculture', 'Technology', 'Tourism'];
+	const sectorFilters = [
+		{ name: 'All', icon: LayoutGrid, description: 'Explore the full spectrum of Indonesia\'s strategic investment opportunities.', tier: 'All', activeClass: 'bg-slate-800 text-white shadow-slate-800/20', hoverClass: 'hover:border-slate-800/40 hover:text-slate-800' },
+		// Primer (Primary Sector)
+		{ name: 'Agriculture', icon: Sprout, description: 'Food security initiatives and sustainable agro-processing developments.', tier: 'Primer', activeClass: 'bg-emerald-600 text-white shadow-emerald-600/20', hoverClass: 'hover:border-emerald-600/40 hover:text-emerald-600' },
+		{ name: 'Fisheries', icon: Waves, description: 'Sustainable aquaculture, deep-sea fisheries, and marine processing hubs.', tier: 'Primer', activeClass: 'bg-emerald-600 text-white shadow-emerald-600/20', hoverClass: 'hover:border-emerald-600/40 hover:text-emerald-600' },
+		{ name: 'Mining', icon: Pickaxe, description: 'Critical mineral extraction and processing supporting global supply chains.', tier: 'Primer', activeClass: 'bg-emerald-600 text-white shadow-emerald-600/20', hoverClass: 'hover:border-emerald-600/40 hover:text-emerald-600' },
+		// Sekunder (Secondary Sector)
+		{ name: 'Manufacturing', icon: Factory, description: 'Value-added processing, industrial estates, and manufacturing hubs.', tier: 'Sekunder', activeClass: 'bg-amber-600 text-white shadow-amber-600/20', hoverClass: 'hover:border-amber-600/40 hover:text-amber-600' },
+		{ name: 'Construction', icon: Construction, description: 'Toll roads, bridges, and smart city developments connecting the archipelago.', tier: 'Sekunder', activeClass: 'bg-amber-600 text-white shadow-amber-600/20', hoverClass: 'hover:border-amber-600/40 hover:text-amber-600' },
+		// Tersier (Tertiary Sector)
+		{ name: 'Energy', icon: Zap, description: 'Renewable and traditional power generation driving national energy security.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
+		{ name: 'Logistics', icon: Truck, description: 'Ports, supply chain hubs, and connectivity networks enhancing trade efficiency.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
+		{ name: 'Technology', icon: Cpu, description: 'Digital infrastructure, data centers, and emerging AI ecosystems.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
+		{ name: 'Tourism', icon: MapPin, description: 'High-value hospitality and eco-tourism across priority destinations.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
+		{ name: 'Healthcare', icon: Stethoscope, description: 'Medical infrastructure and pharmaceutical production for national resilience.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
+		{ name: 'Property', icon: Building2, description: 'Commercial and mixed-use developments in emerging urban centers.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
+		{ name: 'Retail', icon: ShoppingBag, description: 'Consumer-facing infrastructure driven by a growing middle class.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
+		{ name: 'Services', icon: Briefcase, description: 'Professional, financial, and specialized business service ecosystems.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' }
+	];
+
+	const activeDef = $derived(sectorFilters.find(f => f.name === activeFilter) || sectorFilters[0]);
+
+	const categoryIcons: Record<string, any> = {
+		'Energy': Zap,
+		'Construction': Construction,
+		'Logistics': Truck,
+		'Agriculture': Sprout,
+		'Fisheries': Waves,
+		'Technology': Cpu,
+		'Manufacturing': Factory,
+		'Tourism': MapPin,
+		'Healthcare': Stethoscope,
+		'Mining': Pickaxe,
+		'Property': Building2,
+		'Retail': ShoppingBag,
+		'Services': Briefcase
+	};
 	const statusOptions = ['Ready to Offer', 'MoU Signed', 'In Progress', 'Pre-FS', 'Preliminary'];
-	const regionOptions = ['Bali', 'East Kalimantan', 'West Java', 'Jakarta, DKI', 'Surabaya'];
+	const regionOptions = ['Bali', 'East Kalimantan', 'West Java', 'Jakarta, DKI', 'Central Sulawesi', 'South Papua'];
+	const esgOptions = ['AAA', 'AA', 'A', 'B'];
 
 	const sortOptions = [
 		{ value: 'default', label: 'Default' },
 		{ value: 'investment-asc', label: 'Investment: Low → High' },
 		{ value: 'investment-desc', label: 'Investment: High → Low' },
+		{ value: 'irr-desc', label: 'Yield: High → Low' },
 		{ value: 'alpha', label: 'A → Z' },
 	] as const;
+
+	function toggleESG(e: string) {
+		selectedESG = selectedESG.includes(e) ? selectedESG.filter(x => x !== e) : [...selectedESG, e];
+	}
 
 	function toggleStatus(s: string) {
 		selectedStatuses = selectedStatuses.includes(s)
@@ -72,8 +150,12 @@
 	function clearAdvancedFilters() {
 		minInvestment = 0;
 		maxInvestment = 3000;
+		minIRR = 0;
+		maxIRR = 30;
 		selectedStatuses = [];
 		selectedRegions = [];
+		selectedESG = [];
+		riskProfile = 'all';
 		sortBy = 'default';
 	}
 
@@ -86,58 +168,114 @@
 
 	const allProjects = [
 		{
-			id: 'ai-uk',
-			title: m.mock_p1_title(),
-			category: m.mock_p1_cat(),
-			status: m.mock_p1_stat(),
-			location: m.mock_p1_loc(),
+			id: 'p1',
+			title: 'Nusa Penida Wind Farm',
+			category: 'Energy',
+			status: 'Ready to Offer',
+			location: 'Bali',
 			investment: '$120M',
+			irr: '14%',
+			esg: 'AAA',
 			image: 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&q=80&w=400'
 		},
 		{
-			id: 'ai-uk',
-			title: m.mock_p2_title(),
-			category: m.mock_p2_cat(),
-			status: m.mock_p2_stat(),
-			location: m.mock_p2_loc(),
+			id: 'p2',
+			title: 'IKN Smart Logistics Hub',
+			category: 'Logistics',
+			status: 'MoU Signed',
+			location: 'East Kalimantan',
 			investment: '$450M',
+			irr: '11.5%',
+			esg: 'AA',
 			image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=400'
 		},
 		{
-			id: 'ai-uk',
-			title: m.mock_p3_title(),
-			category: m.mock_p3_cat(),
-			status: m.mock_p3_stat(),
-			location: m.mock_p3_loc(),
+			id: 'p3',
+			title: 'Java Sea Algae Farm',
+			category: 'Agriculture',
+			status: 'Preliminary',
+			location: 'West Java',
 			investment: '$45M',
+			irr: '18%',
+			esg: 'AAA',
 			image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&q=80&w=400'
 		},
 		{
-			id: 'ai-uk',
-			title: m.mock_p4_title(),
-			category: m.mock_p4_cat(),
-			status: m.mock_p4_stat(),
-			location: m.mock_p4_loc(),
+			id: 'p4',
+			title: 'Surabaya Port Expansion',
+			category: 'Logistics',
+			status: 'In Progress',
+			location: 'East Java',
 			investment: '$2.1B',
+			irr: '9.8%',
+			esg: 'A',
 			image: 'https://images.unsplash.com/photo-1577705998148-ebbd7a31962e?auto=format&fit=crop&q=80&w=400'
 		},
 		{
-			id: 'ai-uk',
-			title: m.mock_p1_title(),
+			id: 'p5',
+			title: 'Batam Semiconductor Park',
 			category: 'Technology',
-			status: m.mock_p1_stat(),
-			location: 'Jakarta, DKI',
-			investment: '$89M',
+			status: 'Ready to Offer',
+			location: 'Riau Islands',
+			investment: '$890M',
+			irr: '16.5%',
+			esg: 'AA',
 			image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=400'
 		},
 		{
-			id: 'ai-uk',
-			title: m.mock_p4_title(),
+			id: 'p6',
+			title: 'Merauke Food Estate',
 			category: 'Agriculture',
 			status: 'Pre-FS',
-			location: 'East Kalimantan',
+			location: 'South Papua',
 			investment: '$310M',
+			irr: '12%',
+			esg: 'B',
 			image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&q=80&w=400'
+		},
+		{
+			id: 'p7',
+			title: 'Morowali Nickel Smelter',
+			category: 'Downstream',
+			status: 'In Progress',
+			location: 'Central Sulawesi',
+			investment: '$1.4B',
+			irr: '15%',
+			esg: 'B',
+			image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=400'
+		},
+		{
+			id: 'p8',
+			title: 'Lombok Wellness Resort',
+			category: 'Tourism',
+			status: 'Ready to Offer',
+			location: 'West Nusa Tenggara',
+			investment: '$75M',
+			irr: '13.2%',
+			esg: 'AAA',
+			image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=400'
+		},
+		{
+			id: 'p9',
+			title: 'Jakarta Digital Exchange',
+			category: 'Technology',
+			status: 'MoU Signed',
+			location: 'Jakarta, DKI',
+			investment: '$210M',
+			irr: '17.5%',
+			esg: 'AA',
+			image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=400'
+		},
+		{
+			id: 'p10',
+			title: 'Flores Geothermal Plant',
+			category: 'Energy',
+			status: 'Preliminary',
+			location: 'East Nusa Tenggara',
+			investment: '$180M',
+			irr: '10.5%',
+			esg: 'AAA',
+			image: 'https://images.unsplash.com/photo-1466611653911-954ffaa13b6f?auto=format&fit=crop&q=80&w=400'
 		}
 	];
 
@@ -152,32 +290,36 @@
 		(minInvestment > 0 || maxInvestment < 3000 ? 1 : 0)
 	);
 
-	const visibleProjects = $derived.by(() => {
-		let list = activeFilter === 'All' ? allProjects : allProjects.filter(p => p.category === activeFilter);
-
-		// Investment range filter
-		list = list.filter(p => {
-			const v = parseInvestment(p.investment);
-			return v >= minInvestment && v <= maxInvestment;
-		});
-
-		// Status filter
-		if (selectedStatuses.length > 0) {
-			list = list.filter(p => selectedStatuses.includes(p.status));
-		}
-
-		// Region filter
-		if (selectedRegions.length > 0) {
-			list = list.filter(p => selectedRegions.some(r => p.location.includes(r)));
-		}
-
-		// Sort
-		if (sortBy === 'investment-asc') list = [...list].sort((a, b) => parseInvestment(a.investment) - parseInvestment(b.investment));
-		else if (sortBy === 'investment-desc') list = [...list].sort((a, b) => parseInvestment(b.investment) - parseInvestment(a.investment));
-		else if (sortBy === 'alpha') list = [...list].sort((a, b) => a.title.localeCompare(b.title));
-
-		return list;
-	});
+	const filteredProjects = $derived(
+		allProjects
+			.filter(p => {
+				const matchesSearch = !committedSearch || 
+					p.title.toLowerCase().includes(committedSearch.toLowerCase()) ||
+					p.category.toLowerCase().includes(committedSearch.toLowerCase()) ||
+					p.location.toLowerCase().includes(committedSearch.toLowerCase());
+				
+				const matchesCategory = activeFilter === 'All' || p.category === activeFilter;
+				
+				const investVal = parseInvestment(p.investment);
+				const matchesInvestment = investVal >= minInvestment && investVal <= maxInvestment;
+				
+				const irrVal = parseFloat(p.irr.replace('%', ''));
+				const matchesIRR = irrVal >= minIRR && irrVal <= maxIRR;
+				
+				const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(p.status);
+				const matchesRegion = selectedRegions.length === 0 || selectedRegions.includes(p.location);
+				const matchesESG = selectedESG.length === 0 || selectedESG.includes(p.esg);
+				
+				return matchesSearch && matchesCategory && matchesInvestment && matchesIRR && matchesStatus && matchesRegion && matchesESG;
+			})
+			.sort((a, b) => {
+				if (sortBy === 'investment-asc') return parseInvestment(a.investment) - parseInvestment(b.investment);
+				if (sortBy === 'investment-desc') return parseInvestment(b.investment) - parseInvestment(a.investment);
+				if (sortBy === 'irr-desc') return parseFloat(b.irr.replace('%', '')) - parseFloat(a.irr.replace('%', ''));
+				if (sortBy === 'alpha') return a.title.localeCompare(b.title);
+				return 0;
+			})
+	);
 
 	const quickLinks = [
 		m.home_quick_1(),
@@ -201,40 +343,90 @@
 		digital:     { filter: 'Technology',  response: 'Digital economy projects include data centers, e-government platforms, and AI-driven services. Filter applied to technology sector.' },
 		tourism:     { filter: 'Tourism',     response: '10 priority tourism destinations are open for investment, including Labuan Bajo, Lake Toba, and the Mandalika Circuit. Filtered to tourism projects.' },
 		hotel:       { filter: 'Tourism',     response: 'Hospitality and eco-tourism projects in the 10 priority destinations are actively seeking strategic partners. Showing tourism sector.' },
+		hospital:    { filter: 'Healthcare',  response: 'Healthcare infrastructure and pharmaceutical production are key sectors for national resilience. I\'ve identified strategic healthcare projects.' },
+		mining:      { filter: 'Mining',      response: 'Critical mineral mining and processing remain the backbone of Indonesia\'s export economy. Showing mining opportunities.' },
+		office:      { filter: 'Property',    response: 'Mixed-use and commercial property developments in IKN and major urban centers are actively seeking investment.' },
+		retail:      { filter: 'Retail',      response: 'Consumer-facing retail and shopping center developments in growing secondary cities show high potential.' },
+		infrastructure: { filter: 'Infrastructure', response: 'National strategic infrastructure projects include toll roads, bridges, and smart city developments.' },
 	};
 
 	function handleSearch() {
 		if (!inputValue.trim()) return;
 
 		const query = inputValue.toLowerCase();
-		const matched = Object.entries(filterKeywords).find(([kw]) => query.includes(kw));
+		clearAdvancedFilters(); // Reset for a clean AI parse
 
+		// ── COMPLEX AI PARSING (MOCK AGENT LOGIC) ──
+		let detectedFilters = [];
+
+		// Yield/IRR
+		if (query.includes('yield') || query.includes('return') || query.includes('profitable') || query.includes('high irr')) {
+			minIRR = 15;
+			sortBy = 'irr-desc';
+			detectedFilters.push('High Yield (15%+)');
+		}
+
+		// Sustainability/ESG
+		if (query.includes('sustainable') || query.includes('green') || query.includes('esg') || query.includes('impact') || query.includes('clean')) {
+			selectedESG = ['AAA'];
+			detectedFilters.push('AAA Sustainability Rating');
+		}
+
+		// Readiness
+		if (query.includes('ready') || query.includes('available') || query.includes('immediate') || query.includes('now')) {
+			selectedStatuses = ['Ready to Offer'];
+			detectedFilters.push('Ready to Offer Status');
+		}
+
+		// Investment Size
+		if (query.includes('big') || query.includes('large') || query.includes('billion') || query.includes('major')) {
+			minInvestment = 1000;
+			detectedFilters.push('Billion-Dollar Projects');
+		} else if (query.includes('small') || query.includes('entry') || query.includes('medium')) {
+			maxInvestment = 500;
+			detectedFilters.push('Mid-Cap Opportunities');
+		}
+
+		// Region Parsing
+		const regions = [
+			{ kw: 'bali', name: 'Bali' },
+			{ kw: 'kalimantan', name: 'East Kalimantan' },
+			{ kw: 'java', name: 'West Java' },
+			{ kw: 'jakarta', name: 'Jakarta, DKI' },
+			{ kw: 'sulawesi', name: 'Central Sulawesi' },
+			{ kw: 'papua', name: 'South Papua' }
+		];
+		regions.forEach(r => {
+			if (query.includes(r.kw)) {
+				selectedRegions = [...selectedRegions, r.name];
+				detectedFilters.push(r.name);
+			}
+		});
+
+		// Sector Matching
+		const matched = Object.entries(filterKeywords).find(([kw]) => query.includes(kw));
 		if (matched) {
 			const [, { filter, response }] = matched;
 			activeFilter = filter;
-			aiSummary = response;
+			aiSummary = detectedFilters.length > 0 
+				? `${response} I've also applied advanced filters for ${detectedFilters.join(', ')} based on your specific requirements.`
+				: response;
 		} else {
-			const randomPresets = [
-				{ filter: 'Technology', response: `Based on your interest in "${inputValue}", I've highlighted emerging technology and digital infrastructure opportunities.` },
-				{ filter: 'Energy', response: `For "${inputValue}", renewable energy projects offer some of the most aligned investment structures right now.` },
-				{ filter: 'Logistics', response: `I analyzed "${inputValue}" and filtered our pipeline to show strategic logistics and supply chain projects.` },
-				{ filter: 'Agriculture', response: `Your query regarding "${inputValue}" strongly correlates with our food security and sustainable agriculture initiatives.` },
-				{ filter: 'Tourism', response: `Given your focus on "${inputValue}", I've filtered for high-value eco-tourism and hospitality developments.` }
-			];
-			const preset = randomPresets[Math.floor(Math.random() * randomPresets.length)];
-			
-			activeFilter = preset.filter;
-			aiSummary = preset.response;
+			activeFilter = 'All';
+			aiSummary = detectedFilters.length > 0
+				? `I've analyzed our project pipeline and identified several opportunities matching your criteria for ${detectedFilters.join(', ')}.`
+				: `I've analyzed our strategic pipeline for "${inputValue}" and identified several key projects that align with your investment profile.`;
 		}
 
 		isSearching = true;
+		committedSearch = inputValue;
 		inputValue = '';
 		isAiSummaryExpanded = true;
 		
 		if (collapseTimeout) clearTimeout(collapseTimeout);
 		collapseTimeout = setTimeout(() => {
 			isAiSummaryExpanded = false;
-		}, 4000);
+		}, 6000);
 	}
 
 
@@ -326,43 +518,94 @@
 		in:fly={{ y: 50, duration: 550, delay: 250, easing: cubicOut, opacity: 0 }}
 	>
 		<!-- Compact header row -->
-		<div class="flex items-center gap-3 mb-6 flex-wrap max-w-[1400px] mx-auto">
-			<div class="flex items-center gap-2 flex-wrap flex-1">
-				{#each filters as f}
+		<div class="mb-6 max-w-[1400px] mx-auto">
+			<div class="flex items-center justify-between gap-3">
+				<!-- Sector Dropdown -->
+				<div class="relative flex-1">
 					<button
-						onclick={() => activeFilter = f}
-						class="px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wide transition-all cursor-pointer whitespace-nowrap
-							{activeFilter === f
-								? 'bg-bkpm-blue text-white shadow-lg shadow-bkpm-blue/20'
-								: 'bg-white border border-slate-200 text-slate-400 hover:border-bkpm-blue/40 hover:text-bkpm-blue'}"
+						onclick={() => isSectorDropdownOpen = !isSectorDropdownOpen}
+						class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wide border border-slate-200 bg-white shadow-sm hover:border-bkpm-blue/40 transition-all cursor-pointer group"
 					>
-						{f}
+						<activeDef.icon size={16} strokeWidth={2.5} class="transition-colors
+							{activeDef.tier === 'Primer' ? 'text-emerald-500 group-hover:text-emerald-600' : 
+							 activeDef.tier === 'Sekunder' ? 'text-amber-500 group-hover:text-amber-600' : 
+							 activeDef.name === 'All' ? 'text-slate-400 group-hover:text-bkpm-blue' :
+							 'text-bkpm-blue group-hover:text-bkpm-blue'}" 
+						/>
+						<span class="text-slate-700 group-hover:text-slate-900">{activeDef.name === 'All' ? 'All Sectors' : activeDef.name}</span>
+						<ChevronDown size={14} class="ml-1 text-slate-400 transition-transform {isSectorDropdownOpen ? 'rotate-180' : ''}" />
 					</button>
-				{/each}
-			</div>
 
-			<div class="flex items-center gap-2 shrink-0">
-				<span class="text-xs font-bold text-slate-400">{visibleProjects.length} projects</span>
-				{#if activeFilter !== 'All'}
-					<button onclick={() => activeFilter = 'All'} class="text-xs font-bold text-bkpm-blue hover:underline cursor-pointer flex items-center gap-1">
-						<X size={12} />Clear
-					</button>
-				{/if}
-				<button
-					onclick={() => isFilterOpen = !isFilterOpen}
-					class="relative flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-400 font-bold text-xs hover:border-bkpm-blue/40 hover:text-bkpm-blue transition-all cursor-pointer"
-				>
-					<SlidersHorizontal size={13} strokeWidth={2.5} />
-					<ChevronDown size={11} strokeWidth={3} class="transition-transform {isFilterOpen ? 'rotate-180' : ''}" />
-					{#if activeFilterCount > 0}
-						<div class="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-logo-green text-white text-[9px] font-black flex items-center justify-center border-2 border-white shadow-sm">
-							{activeFilterCount}
+					{#if isSectorDropdownOpen}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="fixed inset-0 z-10" onclick={() => isSectorDropdownOpen = false}></div>
+						<div 
+							class="absolute left-0 top-full mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-xl z-20 py-2 max-h-[50vh] overflow-y-auto"
+							transition:slide={{ duration: 200, easing: cubicOut }}
+						>
+							<button 
+								onclick={() => { activeFilter = 'All'; isSectorDropdownOpen = false; }}
+								class="w-full text-left px-5 py-2.5 hover:bg-slate-50 flex items-center justify-between transition-colors {activeFilter === 'All' ? 'bg-slate-50' : ''}"
+							>
+								<div class="flex items-center gap-3">
+									<LayoutGrid size={16} class="text-slate-400" />
+									<span class="text-xs font-black uppercase text-slate-700 tracking-wide">All Sectors</span>
+								</div>
+								{#if activeFilter === 'All'}
+									<Check size={14} strokeWidth={3} class="text-slate-400" />
+								{/if}
+							</button>
+
+							{#each ['Primer', 'Sekunder', 'Tersier'] as tier}
+								<div class="px-5 py-2 mt-2 border-t border-slate-50">
+									<span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">{tier} Tier</span>
+								</div>
+								{#each sectorFilters.filter(f => f.tier === tier) as f}
+									<button
+										onclick={() => { activeFilter = f.name; isSectorDropdownOpen = false; }}
+										class="w-full text-left px-5 py-2.5 hover:bg-slate-50 flex items-center justify-between transition-colors group cursor-pointer {activeFilter === f.name ? 'bg-slate-50' : ''}"
+									>
+										<div class="flex items-center gap-3">
+											<f.icon size={15} class="transition-transform group-hover:scale-110 {tier === 'Primer' ? 'text-emerald-500' : tier === 'Sekunder' ? 'text-amber-500' : 'text-bkpm-blue'}" />
+											<span class="text-xs font-bold {activeFilter === f.name ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}">{f.name}</span>
+										</div>
+										{#if activeFilter === f.name}
+											<Check size={14} strokeWidth={3} class={tier === 'Primer' ? 'text-emerald-500' : tier === 'Sekunder' ? 'text-amber-500' : 'text-bkpm-blue'} />
+										{/if}
+									</button>
+								{/each}
+							{/each}
 						</div>
 					{/if}
-				</button>
+				</div>
+	
+				<div class="flex items-center gap-2 shrink-0">
+					<span class="text-xs font-bold text-slate-400">{filteredProjects.length} projects</span>
+					<button
+						onclick={() => isFilterOpen = !isFilterOpen}
+						class="relative flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-400 font-bold text-xs hover:border-bkpm-blue/40 hover:text-bkpm-blue transition-all cursor-pointer"
+					>
+						<SlidersHorizontal size={14} strokeWidth={2.5} />
+						Filters
+						{#if activeFilterCount > 0}
+							<span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-bkpm-blue text-[9px] font-black text-white shadow-sm ring-2 ring-white">
+								{activeFilterCount}
+							</span>
+						{/if}
+					</button>
+				</div>
 			</div>
-		</div>
 
+			<!-- Sector Description -->
+			{#if activeFilter !== 'All'}
+				<div class="mt-3 px-1" transition:slide={{ duration: 200 }}>
+					<p class="text-[11px] font-medium text-slate-500">
+						{activeDef.description}
+					</p>
+				</div>
+			{/if}
+		</div>
 		{#if isFilterOpen}
 			<div 
 				class="bg-white border border-slate-100 rounded-2xl p-5 mb-6 shadow-sm max-w-[1400px] mx-auto"
@@ -430,6 +673,41 @@
 						</div>
 					</div>
 
+					<!-- ESG Rating -->
+					<div class="space-y-3">
+						<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">ESG Rating</span>
+						<div class="flex flex-wrap gap-2">
+							{#each esgOptions as esg}
+								<button 
+									onclick={() => toggleESG(esg)}
+									class="px-3 py-1.5 rounded-lg border text-[10px] font-black tracking-wide transition-all cursor-pointer
+										{selectedESG.includes(esg) 
+											? 'bg-emerald-500 text-white border-emerald-600' 
+											: 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300'}"
+								>
+									{esg}
+								</button>
+							{/each}
+						</div>
+					</div>
+
+					<!-- IRR Range -->
+					<div class="space-y-3">
+						<div class="flex items-center justify-between">
+							<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target IRR ({minIRR}% - {maxIRR}%)</span>
+						</div>
+						<div class="px-2">
+							<input 
+								type="range" 
+								min="0" 
+								max="30" 
+								step="1"
+								bind:value={minIRR}
+								class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-bkpm-blue" 
+							/>
+						</div>
+					</div>
+
 					<!-- Sort By -->
 					<div class="space-y-3">
 						<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Sort By</span>
@@ -450,35 +728,74 @@
 		{/if}
 
 		<!-- Project grid — more generous spacing -->
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-6 max-w-[1400px] mx-auto">
-			{#each visibleProjects as project (project.title + project.category)}
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12 max-w-[1400px] mx-auto">
+			{#each filteredProjects as project (project.id)}
 				<a
 					href="/project/{project.id}"
-					class="group bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 block"
-					in:fly={{ y: 12, duration: 350 }}
+					class="group bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 block relative"
+					in:fly={{ y: 20, duration: 400 }}
 				>
-					<!-- Image strip -->
-					<div class="h-36 w-full overflow-hidden bg-slate-100">
-						<img src={project.image} alt={project.title} class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-700" />
-					</div>
-					<!-- Content -->
-					<div class="p-4">
-						<div class="flex items-center justify-between mb-2">
-							<span class="text-[9px] font-black text-logo-green uppercase tracking-wide">{project.category}</span>
-							<span class="text-[9px] font-bold px-2 py-0.5 rounded-lg bg-slate-50 text-slate-400 border border-slate-100">{project.status}</span>
+					<!-- Top Right Badge (ESG) -->
+					<div class="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md border border-slate-100 shadow-sm">
+						<div class="flex items-center gap-1">
+							<span class="text-[8px] font-black text-slate-400 uppercase">ESG</span>
+							<span class="text-[10px] font-black text-emerald-600">{project.esg}</span>
 						</div>
-						<h3 class="text-base font-black text-slate-900 mb-2 leading-tight">{project.title}</h3>
-						<div class="flex items-center justify-between text-xs font-bold text-slate-400">
-							<div class="flex items-center gap-1">
-								<MapPin size={12} class="shrink-0" />
-								<span class="truncate">{project.location}</span>
+					</div>
+
+					<!-- Image strip -->
+					<div class="h-44 w-full overflow-hidden bg-slate-100 relative">
+						<img src={project.image} alt={project.title} class="h-full w-full object-cover group-hover:scale-110 transition-transform duration-1000" />
+						<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+					</div>
+
+					<!-- Content -->
+					<div class="p-6">
+						<div class="flex items-center justify-between mb-3">
+							<div class="flex items-center gap-1.5">
+								{#if categoryIcons[project.category]}
+									{@const Icon = categoryIcons[project.category]}
+									<Icon size={12} class="text-bkpm-blue" strokeWidth={3} />
+								{/if}
+								<span class="text-[10px] font-black text-bkpm-blue uppercase tracking-widest">{project.category}</span>
 							</div>
-							<div class="flex items-center gap-0.5 text-bkpm-blue font-black shrink-0">
-								<DollarSign size={12} />{project.investment}
+							<span class="text-[9px] font-black px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 border border-slate-100">{project.status}</span>
+						</div>
+						<h3 class="text-lg font-black text-slate-900 mb-3 leading-tight group-hover:text-bkpm-blue transition-colors">{project.title}</h3>
+						
+						<!-- Financial Strip -->
+						<div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50 mt-auto">
+							<div class="space-y-1">
+								<span class="text-[8px] font-black text-slate-300 uppercase tracking-wider">Investment</span>
+								<div class="flex items-center gap-0.5 text-bkpm-blue font-black text-sm">
+									{formatInvestment(project.investment)}
+								</div>
 							</div>
+							<div class="space-y-1">
+								<span class="text-[8px] font-black text-slate-300 uppercase tracking-wider">Target Yield</span>
+								<div class="flex items-center gap-1 text-slate-800 font-black text-sm">
+									<Zap size={14} class="text-amber-500" strokeWidth={3} />{project.irr} <span class="text-[8px] text-slate-400 font-bold uppercase">IRR</span>
+								</div>
+							</div>
+						</div>
+
+						<div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 mt-4">
+							<MapPin size={12} class="shrink-0 text-slate-300" />
+							<span class="truncate">{project.location}</span>
 						</div>
 					</div>
 				</a>
+			{:else}
+				<div class="col-span-full py-20 text-center">
+					<div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 mb-4">
+						<SlidersHorizontal size={24} class="text-slate-200" />
+					</div>
+					<h3 class="text-xl font-black text-slate-800 mb-2">No results found</h3>
+					<p class="text-slate-400 font-medium">Try adjusting your filters or presets.</p>
+					<button onclick={resetSearch} class="mt-6 px-6 py-2 bg-bkpm-blue text-white rounded-xl font-black text-xs uppercase tracking-wide cursor-pointer hover:bg-bkpm-blue/90 transition-all">
+						Clear All Filters
+					</button>
+				</div>
 			{/each}
 		</div>
 	</div>
@@ -495,15 +812,19 @@
 					out:fade={{ duration: 150 }}
 				>
 					<div class="flex items-center justify-between {isAiSummaryExpanded ? 'mb-2' : ''}">
-						<div class="flex items-center gap-2 cursor-pointer" onclick={() => isAiSummaryExpanded = !isAiSummaryExpanded}>
+						<button 
+							type="button" 
+							class="flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 text-left" 
+							onclick={() => isAiSummaryExpanded = !isAiSummaryExpanded}
+						>
 							<div class="h-6 w-6 rounded-md bg-bkpm-blue flex items-center justify-center shadow shadow-bkpm-blue/20">
 								<Bot size={14} strokeWidth={2.5} class="text-white" />
 							</div>
-							<span class="text-[11px] font-black text-bkpm-blue uppercase tracking-wide">Vesti</span>
+							<span class="text-[11px] font-black text-bkpm-blue tracking-wide">VestiAI</span>
 							{#if !isAiSummaryExpanded}
 								<span class="text-[10px] font-bold text-slate-400 ml-2 truncate max-w-[200px] md:max-w-md hidden sm:inline-block">"{aiSummary}"</span>
 							{/if}
-						</div>
+						</button>
 						<div class="flex items-center gap-1">
 							<button onclick={() => isAiSummaryExpanded = !isAiSummaryExpanded} class="p-1 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-bkpm-blue transition-colors cursor-pointer">
 								{#if isAiSummaryExpanded}

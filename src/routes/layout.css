@@ -30,3 +30,18 @@
 		background-position: 350% 50%, 350% 50%;
 	}
 }
+
+@keyframes logo-scroll {
+	0%   { transform: translateX(0); }
+	100% { transform: translateX(-50%); }
+}
+
+.logo-carousel {
+	animation: logo-scroll 12s linear infinite;
+	width: max-content;
+}
+
+.logo-carousel:hover {
+	animation-play-state: paused;
+}
+

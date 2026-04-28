@@ -3,7 +3,7 @@
 	import { setLocale, getLocale } from '$lib/paraglide/runtime.js';
 	import { fade, fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
-	import { Loader2, ShieldCheck, TrendingUp, Landmark, ChevronDown } from 'lucide-svelte';
+	import { Loader2, ShieldCheck, TrendingUp, Landmark, ChevronDown, ArrowRight, Check } from 'lucide-svelte';
 	import { Gb, Id, Cn, Jp, Kr } from 'svelte-flag-icons';
 	import bkpmEmblem from '$lib/assets/logos/bkpm-emblem.png';
 	
@@ -21,6 +21,10 @@
 	function handleLogin(e: Event) {
 		e.preventDefault();
 		isLoading = true;
+		
+		// Set a mock cookie for prototype persistence across refreshes
+		document.cookie = "proto_auth=true; path=/; max-age=2592000";
+		
 		// Simulate login
 		setTimeout(() => {
 			goto('/onboarding');
@@ -81,7 +85,7 @@
 		
 		<!-- Language Dropdown Selector (Absolute Top Right) -->
 		<div class="absolute top-8 right-8 z-50">
-			<div class="relative">
+			<div class="relative z-50" role="group" aria-label="Language Selector">
 				<button 
 					onclick={() => isLangMenuOpen = !isLangMenuOpen}
 					class="flex items-center bg-white hover:bg-slate-50 rounded-full px-4 py-2 space-x-2 border border-slate-200 transition-colors cursor-pointer shadow-sm"
@@ -107,31 +111,36 @@
 				</button>
 
 				{#if isLangMenuOpen}
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div class="fixed inset-0 z-40" onclick={() => isLangMenuOpen = false}></div>
 					<div 
-						class="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-200/50 py-2 z-50 animate-in fade-in zoom-in-95 duration-200"
+						class="absolute right-0 top-full pt-2 w-32 z-50 animate-in fade-in zoom-in-95 duration-200"
 						role="menu"
-						onmouseleave={() => isLangMenuOpen = false}
+						tabindex="-1"
 					>
-						<button onclick={() => { changeLanguage('en'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'en' ? 'bg-slate-50' : ''}">
+						<div class="bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-200/50 py-2">
+						<button onclick={() => { changeLanguage('en'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'en' ? 'bg-slate-50' : ''}">
 							<Gb size="16" class="rounded-sm shadow-sm" />
 							<span class="text-xs font-bold {getLocale() === 'en' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">English</span>
 						</button>
-						<button onclick={() => { changeLanguage('id'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'id' ? 'bg-slate-50' : ''}">
+						<button onclick={() => { changeLanguage('id'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'id' ? 'bg-slate-50' : ''}">
 							<Id size="16" class="rounded-sm shadow-sm" />
 							<span class="text-xs font-bold {getLocale() === 'id' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">Bahasa</span>
 						</button>
-						<button onclick={() => { changeLanguage('zh'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'zh' ? 'bg-slate-50' : ''}">
+						<button onclick={() => { changeLanguage('zh'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'zh' ? 'bg-slate-50' : ''}">
 							<Cn size="16" class="rounded-sm shadow-sm" />
 							<span class="text-xs font-bold {getLocale() === 'zh' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">中文</span>
 						</button>
-						<button onclick={() => { changeLanguage('ja'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'ja' ? 'bg-slate-50' : ''}">
+						<button onclick={() => { changeLanguage('ja'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'ja' ? 'bg-slate-50' : ''}">
 							<Jp size="16" class="rounded-sm shadow-sm" />
 							<span class="text-xs font-bold {getLocale() === 'ja' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">日本語</span>
 						</button>
-						<button onclick={() => { changeLanguage('ko'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'ko' ? 'bg-slate-50' : ''}">
+						<button onclick={() => { changeLanguage('ko'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'ko' ? 'bg-slate-50' : ''}">
 							<Kr size="16" class="rounded-sm shadow-sm" />
 							<span class="text-xs font-bold {getLocale() === 'ko' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">한국어</span>
 						</button>
+						</div>
 					</div>
 				{/if}
 			</div>
@@ -180,7 +189,7 @@
 							id="remember" 
 							class="peer appearance-none w-full h-full rounded-md border-2 border-slate-200 checked:bg-bkpm-blue checked:border-bkpm-blue transition-all cursor-pointer" 
 						/>
-						<ShieldCheck 
+						<Check 
 							size={12} 
 							strokeWidth={4} 
 							class="absolute text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" 
@@ -202,7 +211,7 @@
 					{:else}
 						<div class="flex items-center justify-center space-x-2" in:fade>
 							<span>{m.login_btn_submit()}</span>
-							<ShieldCheck size={16} strokeWidth={3} />
+							<ArrowRight size={16} strokeWidth={3} />
 						</div>
 					{/if}
 				</button>

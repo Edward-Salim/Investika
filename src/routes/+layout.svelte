@@ -10,17 +10,32 @@
 
 	import './layout.css';
 	import { Gb, Id, Cn, Jp, Kr } from 'svelte-flag-icons';
-	import { Home, Menu, User, ChevronDown, BookOpen, Map } from 'lucide-svelte';
+	import { Home, Menu, User, ChevronDown, BookOpen, Map, LogOut, ArrowRight } from 'lucide-svelte';
 	import { page } from '$app/state';
+	import { settingsStore } from '$lib/state/settings.svelte.js';
 	import logoWhite from '$lib/assets/investika-white.png';
+	import investikaBlue from '$lib/assets/investika-blue.png';
 	import aiIncubation from '$lib/assets/logos/ai-incubation.png';
+	import bkpmLogo from '$lib/assets/logos/bkpm-logo.png';
+	import britishEmbassy from '$lib/assets/logos/british-embassy.png';
+	import ukDev from '$lib/assets/logos/uk-dev.png';
+	import ukIdTechHub from '$lib/assets/logos/uk-id-tech-hub.png';
 	
-	let { children } = $props();
+	let { data, children } = $props();
+
+	const user = $derived(data.user);
+	const isAuthenticated = $derived(!!data.session || data.isProtoAuth);
 
 	let isSidebarOpen = $state(true);
 	let isLangMenuOpen = $state(false);
+	let isProfileMenuOpen = $state(false);
 	let isAuthPage = $derived(page.url.pathname === '/login' || page.url.pathname === '/onboarding');
 </script>
+
+<svelte:head>
+	<link rel="icon" type="image/png" href={investikaBlue} />
+	<link rel="apple-touch-icon" href={investikaBlue} />
+</svelte:head>
 
 {#if isAuthPage}
 	<main class="min-h-screen w-full bg-white font-sans text-slate-900">
@@ -101,29 +116,41 @@
 			</a>
 		</nav>
 
-		<!-- Partnership Branding (Tightened) -->
-		<div class="border-t border-white/10 p-4 mb-0 overflow-hidden bg-white/5">
-			<div class="flex flex-col space-y-2" class:items-center={!isSidebarOpen}>
-				<span class="text-[7px] font-black text-white/30 uppercase tracking-wide whitespace-nowrap"
-					class:opacity-0={!isSidebarOpen}
-					class:h-0={!isSidebarOpen}>{m.nav_partnership()}</span>
-				
-				<div class="group relative flex items-center transition-all">
-					<img 
-						src={aiIncubation} 
-						alt="AI Incubation" 
-						class="h-auto w-full max-w-[85px] brightness-0 invert opacity-60 group-hover:opacity-100 transition-all"
-						class:max-w-[24px]={!isSidebarOpen}
-					/>
+		<!-- Partnership Branding - Auto Carousel -->
+		<div class="border-t border-white/10 p-3 mb-0 bg-white/5 overflow-hidden">
+			{#if isSidebarOpen}
+				<span class="text-[7px] font-black text-white/30 uppercase tracking-wide whitespace-nowrap block mb-2">{m.nav_partnership()}</span>
+				<div class="overflow-hidden">
+					<div class="logo-carousel flex items-center gap-6">
+						<!-- Duplicate set for seamless loop -->
+						{#each [
+							{ src: aiIncubation, alt: 'AI Incubation', cls: 'h-6 max-w-[72px]' },
+							{ src: bkpmLogo, alt: 'BKPM', cls: 'h-9 max-w-[96px]' },
+							{ src: britishEmbassy, alt: 'British Embassy', cls: 'h-9 max-w-[96px]' },
+							{ src: ukDev, alt: 'UK Development', cls: 'h-6 max-w-[72px]' },
+							{ src: ukIdTechHub, alt: 'UK-ID Tech Hub', cls: 'h-7 max-w-[80px]' },
+							{ src: aiIncubation, alt: 'AI Incubation', cls: 'h-6 max-w-[72px]' },
+							{ src: bkpmLogo, alt: 'BKPM', cls: 'h-9 max-w-[96px]' },
+							{ src: britishEmbassy, alt: 'British Embassy', cls: 'h-9 max-w-[96px]' },
+							{ src: ukDev, alt: 'UK Development', cls: 'h-6 max-w-[72px]' },
+							{ src: ukIdTechHub, alt: 'UK-ID Tech Hub', cls: 'h-7 max-w-[80px]' },
+						] as logo}
+							<img src={logo.src} alt={logo.alt} class="w-auto object-contain shrink-0 brightness-0 invert opacity-50 hover:opacity-100 transition-opacity {logo.cls}" />
+						{/each}
+					</div>
 				</div>
-			</div>
+			{:else}
+				<div class="flex justify-center">
+					<img src={aiIncubation} alt="Partner" class="h-5 w-5 object-contain brightness-0 invert opacity-50" />
+				</div>
+			{/if}
 		</div>
 	</aside>
 
 	<!-- Main Body -->
-	<div class="flex flex-1 flex-col relative overflow-hidden bg-white">
+	<div class="flex flex-1 flex-col relative bg-white">
 		<!-- Topbar -->
-		<header class="flex h-16 items-center justify-between bg-white pl-8 pr-4 z-10 border-b border-slate-50">
+		<header class="flex h-16 items-center justify-between bg-white pl-8 pr-4 z-50 border-b border-slate-50 relative">
 			<div class="flex items-center space-x-4">
 				<button
 					onclick={() => (isSidebarOpen = !isSidebarOpen)}
@@ -136,7 +163,7 @@
 
 			<div class="flex items-center space-x-4">
 				<!-- Language Dropdown Selector -->
-				<div class="relative">
+				<div class="relative" role="group" aria-label="Language Selector">
 					<button 
 						onclick={() => isLangMenuOpen = !isLangMenuOpen}
 						class="flex items-center bg-slate-50 hover:bg-slate-100 rounded-full pl-3 pr-2.5 py-1.5 space-x-2 border border-slate-200 transition-colors cursor-pointer"
@@ -162,44 +189,144 @@
 					</button>
 
 					{#if isLangMenuOpen}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="fixed inset-0 z-40" onclick={() => isLangMenuOpen = false}></div>
 						<div 
-							class="absolute right-0 mt-2 w-32 bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-200/50 py-2 z-50 animate-in fade-in zoom-in-95 duration-200"
+							class="absolute right-0 top-full pt-2 w-48 z-50 animate-in fade-in zoom-in-95 duration-200"
 							role="menu"
-							onmouseleave={() => isLangMenuOpen = false}
+							tabindex="-1"
 						>
-							<button onclick={() => { changeLanguage('en'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'en' ? 'bg-slate-50' : ''}">
+							<div class="bg-white border border-slate-100 rounded-2xl shadow-xl shadow-slate-200/50 py-2">
+							<button onclick={() => { changeLanguage('en'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'en' ? 'bg-slate-50' : ''}">
 								<Gb size="16" class="rounded-sm shadow-sm" />
 								<span class="text-xs font-bold {getLocale() === 'en' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">English</span>
 							</button>
-							<button onclick={() => { changeLanguage('id'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'id' ? 'bg-slate-50' : ''}">
+							<button onclick={() => { changeLanguage('id'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'id' ? 'bg-slate-50' : ''}">
 								<Id size="16" class="rounded-sm shadow-sm" />
 								<span class="text-xs font-bold {getLocale() === 'id' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">Bahasa</span>
 							</button>
-							<button onclick={() => { changeLanguage('zh'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'zh' ? 'bg-slate-50' : ''}">
+							<button onclick={() => { changeLanguage('zh'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'zh' ? 'bg-slate-50' : ''}">
 								<Cn size="16" class="rounded-sm shadow-sm" />
 								<span class="text-xs font-bold {getLocale() === 'zh' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">中文</span>
 							</button>
-							<button onclick={() => { changeLanguage('ja'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'ja' ? 'bg-slate-50' : ''}">
+							<button onclick={() => { changeLanguage('ja'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'ja' ? 'bg-slate-50' : ''}">
 								<Jp size="16" class="rounded-sm shadow-sm" />
 								<span class="text-xs font-bold {getLocale() === 'ja' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">日本語</span>
 							</button>
-							<button onclick={() => { changeLanguage('ko'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors {getLocale() === 'ko' ? 'bg-slate-50' : ''}">
+							<button onclick={() => { changeLanguage('ko'); isLangMenuOpen = false; }} class="w-full flex items-center space-x-3 px-4 py-2 hover:bg-slate-50 transition-colors cursor-pointer {getLocale() === 'ko' ? 'bg-slate-50' : ''}">
 								<Kr size="16" class="rounded-sm shadow-sm" />
 								<span class="text-xs font-bold {getLocale() === 'ko' ? 'text-bkpm-blue font-black' : 'text-slate-600'}">한국어</span>
 							</button>
+							</div>
 						</div>
 					{/if}
 				</div>
 
 				<!-- Profile Section -->
-				<div class="flex items-center space-x-4 pl-4 border-l border-slate-100">
-					<div class="flex flex-col items-end">
-						<a href="/login" class="text-xs font-black text-bkpm-blue hover:text-logo-green transition-colors">{m.nav_sign_in()}</a>
-						<span class="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">{m.nav_guest()}</span>
-					</div>
-					<div class="h-9 w-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300">
-						<User size={20} strokeWidth={2.5} />
-					</div>
+				<div class="relative" role="group" aria-label="Profile Menu">
+					<button 
+						onclick={() => isProfileMenuOpen = !isProfileMenuOpen}
+						class="flex items-center space-x-4 pl-4 border-l border-slate-100 group cursor-pointer"
+					>
+						<div class="flex flex-col items-end">
+							<span class="text-xs font-black text-bkpm-blue group-hover:text-logo-green transition-colors">
+								{isAuthenticated ? (user?.name || 'Investor') : m.nav_guest()}
+							</span>
+							<span class="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">
+								{isAuthenticated ? 'Authenticated' : 'Public Access'}
+							</span>
+						</div>
+						<div class="h-9 w-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 group-hover:border-bkpm-blue/20 group-hover:bg-bkpm-blue/5 group-hover:text-bkpm-blue transition-all">
+							<User size={20} strokeWidth={2.5} />
+						</div>
+					</button>
+
+					{#if isProfileMenuOpen}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div class="fixed inset-0 z-40" onclick={() => isProfileMenuOpen = false}></div>
+						<div 
+							class="absolute right-0 top-full pt-2 w-64 z-50 animate-in fade-in zoom-in-95 duration-200"
+							role="menu"
+							tabindex="-1"
+						>
+							<div class="bg-white border border-slate-100 rounded-2xl shadow-2xl shadow-slate-200/50 py-3 overflow-hidden">
+								<!-- Profile Link -->
+								<a href="/profile" class="flex items-center space-x-3 px-5 py-2.5 hover:bg-slate-50 transition-colors group">
+									<div class="p-1.5 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-bkpm-blue/10 group-hover:text-bkpm-blue transition-colors">
+										<User size={14} strokeWidth={2.5} />
+									</div>
+									<span class="text-xs font-bold text-slate-600">Profile Details</span>
+								</a>
+
+								<div class="h-[1px] bg-slate-50 my-2 mx-5"></div>
+
+								<!-- Settings Section -->
+								<div class="px-5 py-2">
+									<!-- Follow Language Currency -->
+									<div class="flex items-center justify-between mb-4">
+										<div class="flex flex-col">
+											<span class="text-[11px] font-black text-slate-700">Auto-Currency</span>
+											<span class="text-[9px] font-medium text-slate-400">Match currency to locale</span>
+										</div>
+										<button 
+											onclick={() => settingsStore.followLanguageCurrency = !settingsStore.followLanguageCurrency}
+											class="w-8 h-4.5 rounded-full relative transition-colors cursor-pointer {settingsStore.followLanguageCurrency ? 'bg-bkpm-blue' : 'bg-slate-200'}"
+											aria-label="Toggle Auto-Currency"
+										>
+											<div class="absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-white rounded-full transition-transform {settingsStore.followLanguageCurrency ? 'translate-x-3.5' : 'translate-x-0'}"></div>
+										</button>
+									</div>
+
+									<!-- Disable Personalization -->
+									<div class="flex items-center justify-between">
+										<div class="flex flex-col">
+											<span class="text-[11px] font-black text-slate-700">Privacy Mode</span>
+											<span class="text-[9px] font-medium text-slate-400">Disable personalization</span>
+										</div>
+										<button 
+											onclick={() => settingsStore.disablePersonalization = !settingsStore.disablePersonalization}
+											class="w-8 h-4.5 rounded-full relative transition-colors cursor-pointer {settingsStore.disablePersonalization ? 'bg-bkpm-blue' : 'bg-slate-200'}"
+											aria-label="Toggle Privacy Mode"
+										>
+											<div class="absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-white rounded-full transition-transform {settingsStore.disablePersonalization ? 'translate-x-3.5' : 'translate-x-0'}"></div>
+										</button>
+									</div>
+								</div>
+
+								<div class="h-[1px] bg-slate-50 my-2 mx-5"></div>
+
+								<!-- Logout -->
+								<div class="px-2">
+									{#if isAuthenticated}
+										<button 
+											onclick={() => {
+												document.cookie = "proto_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+												window.location.href = '/login';
+											}}
+											class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-red-500 transition-colors group cursor-pointer"
+										>
+											<div class="p-1.5 rounded-lg bg-red-50 text-red-400 group-hover:bg-red-100 group-hover:text-red-500 transition-colors">
+												<LogOut size={14} strokeWidth={2.5} />
+											</div>
+											<span class="text-xs font-black uppercase tracking-wide">{m.nav_logout()}</span>
+										</button>
+									{:else}
+										<a 
+											href="/login" 
+											class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl hover:bg-bkpm-blue/5 text-bkpm-blue transition-colors group cursor-pointer"
+										>
+											<div class="p-1.5 rounded-lg bg-bkpm-blue/5 text-bkpm-blue group-hover:bg-bkpm-blue/10 transition-colors">
+												<ArrowRight size={14} strokeWidth={2.5} />
+											</div>
+											<span class="text-xs font-black uppercase tracking-wide">{m.nav_sign_in()}</span>
+										</a>
+									{/if}
+								</div>
+							</div>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</header>
