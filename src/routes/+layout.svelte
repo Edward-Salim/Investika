@@ -11,10 +11,11 @@
 
 	import './layout.css';
 	import { Gb, Id, Cn, Jp, Kr } from 'svelte-flag-icons';
-	import { Home, Menu, User, ChevronDown, BookOpen, Map, LogOut, ArrowRight } from 'lucide-svelte';
+	import { Home, Menu, User, ChevronDown, BookOpen, Map, LogOut, ArrowRight, BrainCircuit } from 'lucide-svelte';
 	import { page } from '$app/state';
 	import { settingsStore } from '$lib/state/settings.svelte.js';
 	import { searchStore } from '$lib/state/search.svelte.js';
+	import { compareStore } from '$lib/state/compare.svelte';
 	import logoWhite from '$lib/assets/investika-white.png';
 	import investikaBlue from '$lib/assets/investika-blue.png';
 	import aiIncubation from '$lib/assets/logos/ai-incubation.png';
@@ -127,6 +128,33 @@
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					Regions
+				</span>
+			</a>
+			<a
+				href="/compare"
+				title="AI Compare"
+				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
+					{page.url.pathname === '/compare' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+				class:justify-center={!isSidebarOpen}
+				class:px-0={!isSidebarOpen}
+			>
+				<div class="relative {!isSidebarOpen ? '' : 'mr-3'} shrink-0">
+					<BrainCircuit
+						size={18}
+						strokeWidth={2.5}
+						class="transition-colors {page.url.pathname === '/compare' ? 'text-cyan-400' : 'text-cyan-400/70 group-hover:text-cyan-400'}"
+					/>
+					{#if compareStore.projects.length > 0}
+						<span class="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-400 text-[8px] font-black text-slate-900 shadow ring-2 ring-bkpm-blue">
+							{compareStore.projects.length}
+						</span>
+					{/if}
+				</div>
+				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
+					AI Compare
+					{#if compareStore.projects.length > 0}
+						<span class="ml-1.5 inline-flex items-center justify-center h-4 px-1.5 rounded-full bg-cyan-400/20 text-cyan-300 text-[8px] font-black">{compareStore.projects.length}/3</span>
+					{/if}
 				</span>
 			</a>
 		</nav>

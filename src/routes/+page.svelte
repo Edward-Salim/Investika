@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
-	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, ChevronUp, LayoutGrid, Truck, Sprout, Cpu, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope, RotateCcw } from 'lucide-svelte';
+	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, ChevronUp, LayoutGrid, Truck, Sprout, Cpu, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope, RotateCcw, Image } from 'lucide-svelte';
 	import { fade, fly, slide } from 'svelte/transition';
 	import { cubicOut, cubicInOut } from 'svelte/easing';
 	import bkpmEmblem from '$lib/assets/logos/bkpm-emblem.png';
@@ -8,6 +8,11 @@
 	import { searchStore } from '$lib/state/search.svelte.js';
 	import { settingsStore } from '$lib/state/settings.svelte.js';
 	import { getLocale } from '$lib/paraglide/runtime.js';
+	import type { PageData } from './$types';
+	import { compareStore } from '$lib/state/compare.svelte';
+	import ProjectCard from '$lib/components/ProjectCard.svelte';
+
+	let { data } = $props<{ data: PageData }>();
 	
 	// Project Images
 	import surabayaPortImg from '$lib/assets/projects/surabaya-port.png';
@@ -29,11 +34,10 @@
 	let maxInvestment = $state(searchStore.maxInvestment);
 	let selectedStatuses = $state<string[]>(searchStore.selectedStatuses);
 	let selectedRegions = $state<string[]>(searchStore.selectedRegions);
-	let selectedESG = $state<string[]>(searchStore.selectedESG);
 	let minIRR = $state(searchStore.minIRR);
 	let maxIRR = $state(searchStore.maxIRR);
 	let riskProfile = $state<'all' | 'conservative' | 'balanced' | 'aggressive'>(searchStore.riskProfile);
-	let sortBy = $state<'default' | 'investment-asc' | 'investment-desc' | 'alpha' | 'irr-desc' | 'esg-asc'>(searchStore.sortBy);
+	let sortBy = $state<'default' | 'investment-asc' | 'investment-desc' | 'alpha' | 'irr-desc'>(searchStore.sortBy);
 
 	// Reactive check: if input is cleared, clear the committed search automatically
 	$effect(() => {
@@ -66,6 +70,15 @@
 		}
 	}
 
+	// Helper to encode URLs and proxy restricted BKPM images
+	const safeUrl = (url: string | null) => {
+		if (!url) return 'https://images.unsplash.com/photo-1590487988256-9ed24133863e?auto=format&fit=crop&q=80&w=400';
+		if (url.includes('bkpm.go.id')) {
+			return `/api/proxy-image?url=${encodeURIComponent(url.replace(/ /g, '%20'))}`;
+		}
+		return url.replace(/ /g, '%20');
+	};
+
 	$effect(() => {
 		searchStore.inputValue = inputValue;
 		searchStore.aiSummary = aiSummary;
@@ -77,7 +90,6 @@
 		searchStore.maxInvestment = maxInvestment;
 		searchStore.selectedStatuses = selectedStatuses;
 		searchStore.selectedRegions = selectedRegions;
-		searchStore.selectedESG = selectedESG;
 		searchStore.minIRR = minIRR;
 		searchStore.maxIRR = maxIRR;
 		searchStore.riskProfile = riskProfile;
@@ -118,7 +130,7 @@
 		{ name: 'Energy', label: m.sector_energy(), icon: Zap, description: 'Renewable and traditional power generation driving national energy security.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
 		{ name: 'Logistics', label: m.sector_log(), icon: Truck, description: 'Ports, supply chain hubs, and connectivity networks enhancing trade efficiency.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
 		{ name: 'Technology', label: m.sector_tech(), icon: Cpu, description: 'Digital infrastructure, data centers, and emerging AI ecosystems.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
-		{ name: 'Tourism', label: m.sector_tour(), icon: MapPin, description: 'High-value hospitality and eco-tourism across priority destinations.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
+		{ name: 'Tourism', label: m.sector_tour(), icon: Palmtree, description: 'High-value hospitality and eco-tourism across priority destinations.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
 		{ name: 'Healthcare', label: m.sector_serv(), icon: Stethoscope, description: 'Medical infrastructure and pharmaceutical production for national resilience.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
 		{ name: 'Property', label: m.sector_prop(), icon: Building2, description: 'Commercial and mixed-use developments in emerging urban centers.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
 		{ name: 'Retail', label: m.sector_retail(), icon: ShoppingBag, description: 'Consumer-facing infrastructure driven by a growing middle class.', tier: 'Tersier', activeClass: 'bg-bkpm-blue text-white shadow-bkpm-blue/20', hoverClass: 'hover:border-bkpm-blue/40 hover:text-bkpm-blue' },
@@ -135,7 +147,7 @@
 		'Fisheries': Waves,
 		'Technology': Cpu,
 		'Manufacturing': Factory,
-		'Tourism': MapPin,
+		'Tourism': Palmtree,
 		'Healthcare': Stethoscope,
 		'Mining': Pickaxe,
 		'Property': Building2,
@@ -149,8 +161,11 @@
 		{ id: 'Pre-FS', label: m.filter_pre_fs() },
 		{ id: 'Preliminary', label: m.filter_preliminary() }
 	];
-	const regionOptions = ['Bali', 'East Kalimantan', 'West Java', 'Jakarta, DKI', 'Central Sulawesi', 'South Papua'];
-	const esgOptions = ['AAA', 'AA', 'A', 'B'];
+	const regionOptions = [
+		{ id: 'wilayah indonesia bagian barat', label: 'Barat' },
+		{ id: 'wilayah indonesia bagian tengah', label: 'Tengah' },
+		{ id: 'wilayah indonesia bagian timur', label: 'Timur' }
+	];
 
 	const sortOptions = [
 		{ value: 'default', label: 'Default' },
@@ -159,10 +174,6 @@
 		{ value: 'irr-desc', label: 'Yield: High → Low' },
 		{ value: 'alpha', label: 'A → Z' },
 	] as const;
-
-	function toggleESG(e: string) {
-		selectedESG = selectedESG.includes(e) ? selectedESG.filter(x => x !== e) : [...selectedESG, e];
-	}
 
 	function toggleStatus(s: string) {
 		selectedStatuses = selectedStatuses.includes(s)
@@ -178,12 +189,11 @@
 
 	function clearAdvancedFilters() {
 		minInvestment = 0;
-		maxInvestment = 3000;
+		maxInvestment = 100000;
 		minIRR = 0;
 		maxIRR = 30;
 		selectedStatuses = [];
 		selectedRegions = [];
-		selectedESG = [];
 		riskProfile = 'all';
 		sortBy = 'default';
 	}
@@ -195,118 +205,51 @@
 		return n;
 	}
 
-	const allProjects = [
-		{
-			id: 'p1',
-			title: 'Nusa Penida Wind Farm',
-			category: 'Energy',
-			status: 'Ready to Offer',
-			location: 'Bali',
-			investment: '$120M',
-			irr: '14%',
-			esg: 'AAA',
-			image: 'https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&q=80&w=400'
-		},
-		{
-			id: 'p2',
-			title: 'IKN Smart Logistics Hub',
-			category: 'Logistics',
-			status: 'MoU Signed',
-			location: 'East Kalimantan',
-			investment: '$450M',
-			irr: '11.5%',
-			esg: 'AA',
-			image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=400'
-		},
-		{
-			id: 'p3',
-			title: 'Java Sea Algae Farm',
-			category: 'Agriculture',
-			status: 'Preliminary',
-			location: 'West Java',
-			investment: '$45M',
-			irr: '18%',
-			esg: 'AAA',
-			image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&q=80&w=400'
-		},
-		{
-			id: 'p4',
-			title: 'Surabaya Port Expansion',
-			category: 'Logistics',
-			status: 'In Progress',
-			location: 'East Java',
-			investment: '$2.1B',
-			irr: '9.8%',
-			esg: 'A',
-			image: surabayaPortImg
-		},
-		{
-			id: 'p5',
-			title: 'Batam Semiconductor Park',
-			category: 'Technology',
-			status: 'Ready to Offer',
-			location: 'Riau Islands',
-			investment: '$890M',
-			irr: '16.5%',
-			esg: 'AA',
-			image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=400'
-		},
-		{
-			id: 'p6',
-			title: 'Merauke Food Estate',
-			category: 'Agriculture',
-			status: 'Pre-FS',
-			location: 'South Papua',
-			investment: '$310M',
-			irr: '12%',
-			esg: 'B',
-			image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&q=80&w=400'
-		},
-		{
-			id: 'p7',
-			title: 'Morowali Nickel Smelter',
-			category: 'Downstream',
-			status: 'In Progress',
-			location: 'Central Sulawesi',
-			investment: '$1.4B',
-			irr: '15%',
-			esg: 'B',
-			image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&q=80&w=400'
-		},
-		{
-			id: 'p8',
-			title: 'Lombok Wellness Resort',
-			category: 'Tourism',
-			status: 'Ready to Offer',
-			location: 'West Nusa Tenggara',
-			investment: '$75M',
-			irr: '13.2%',
-			esg: 'AAA',
-			image: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&q=80&w=400'
-		},
-		{
-			id: 'p9',
-			title: 'Jakarta Digital Exchange',
-			category: 'Technology',
-			status: 'MoU Signed',
-			location: 'Jakarta, DKI',
-			investment: '$210M',
-			irr: '17.5%',
-			esg: 'AA',
-			image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=400'
-		},
-		{
-			id: 'p10',
-			title: 'Flores Geothermal Plant',
-			category: 'Energy',
-			status: 'Preliminary',
-			location: 'East Nusa Tenggara',
-			investment: '$180M',
-			irr: '15.5%',
-			esg: 'AAA',
-			image: floresGeothermalImg
-		}
-	];
+	const categoryMap: Record<string, string> = {
+		'Pariwisata': 'Tourism',
+		'Infrastruktur': 'Infrastructure',
+		'Kawasan Industri dan Real Estate': 'Property',
+		'Jasa dan Kawasan': 'Services',
+		'Industri Manufaktur': 'Manufacturing',
+		'Pertanian dan Peternakan': 'Agriculture',
+		'Perikanan': 'Fisheries',
+		'Energi': 'Energy',
+		'Pertambangan': 'Mining',
+		'Kesehatan': 'Healthcare',
+		'Transportasi dan Logistik': 'Logistics',
+		'Kehutanan': 'Agriculture',
+		'Perdagangan': 'Retail'
+	};
+
+	const allProjects = $derived(data.projects.map((p: any) => {
+		const mappedCategory = p.nama_sektor_peluang ? (categoryMap[p.nama_sektor_peluang] || p.nama_sektor_peluang) : 'Other';
+		
+		const parseInvest = (s: string | null) => {
+			if (!s) return 0;
+			const n = parseFloat(s.replace(/[^0-9,]/g, '').replace(',', '.'));
+			if (s.includes('T')) return n * 1000;
+			return n;
+		};
+
+		const parseIrr = (s: string | null) => s ? parseFloat(s.replace(/[^0-9.,]/g, '').replace(',', '.')) : 0;
+
+		return {
+			id: p.id_peluang.toString(),
+			title: p.nama || 'Untitled Project',
+			category: mappedCategory,
+			status: p.status || p.status_proyek || 'Active',
+			location: p.nama_provinsi || p.nama_kabkot || 'Indonesia',
+			provinceId: p.id_adm_provinsi,
+			wilayah: p.wilayah_group || null,
+			investment: p.nilai_investasi || 'TBD',
+			irr: p.nilai_irr || 'TBD',
+			npv: p.nilai_npv || 'TBD',
+			image: p.image_url || null,
+			investmentNum: p.nilai_investasi_amount ? parseFloat(p.nilai_investasi_amount) : parseInvest(p.nilai_investasi),
+			irrNum: p.nilai_irr_percent ? parseFloat(p.nilai_irr_percent) : parseIrr(p.nilai_irr),
+			npvNum: p.nilai_npv_amount ? parseFloat(p.nilai_npv_amount) : parseInvest(p.nilai_npv)
+		};
+	}));
 
 	const hasAdvancedFilters = $derived(
 		selectedStatuses.length > 0 || 
@@ -314,7 +257,7 @@
 		selectedESG.length > 0 || 
 		sortBy !== 'default' || 
 		minInvestment > 0 || 
-		maxInvestment < 3000 ||
+		maxInvestment < 100000 ||
 		minIRR > 0
 	);
 
@@ -322,12 +265,12 @@
 		(selectedStatuses.length > 0 ? 1 : 0) +
 		(selectedRegions.length > 0 ? 1 : 0) +
 		(sortBy !== 'default' ? 1 : 0) +
-		(minInvestment > 0 || maxInvestment < 3000 ? 1 : 0)
+		(minInvestment > 0 || maxInvestment < 100000 ? 1 : 0)
 	);
 
 	const filteredProjects = $derived(
 		allProjects
-			.filter(p => {
+			.filter((p: any) => {
 				const matchesSearch = !committedSearch || 
 					p.title.toLowerCase().includes(committedSearch.toLowerCase()) ||
 					p.category.toLowerCase().includes(committedSearch.toLowerCase()) ||
@@ -335,22 +278,18 @@
 				
 				const matchesCategory = activeFilter === 'All' || p.category === activeFilter;
 				
-				const investVal = parseInvestment(p.investment);
-				const matchesInvestment = investVal >= minInvestment && investVal <= maxInvestment;
-				
-				const irrVal = parseFloat(p.irr.replace('%', ''));
-				const matchesIRR = irrVal >= minIRR && irrVal <= maxIRR;
+				const matchesInvestment = p.investmentNum >= minInvestment && p.investmentNum <= maxInvestment;
+				const matchesIRR = p.irrNum >= minIRR && p.irrNum <= maxIRR;
 				
 				const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(p.status);
-				const matchesRegion = selectedRegions.length === 0 || selectedRegions.includes(p.location);
-				const matchesESG = selectedESG.length === 0 || selectedESG.includes(p.esg);
+				const matchesRegion = selectedRegions.length === 0 || (p.wilayah && selectedRegions.includes(p.wilayah));
 				
-				return matchesSearch && matchesCategory && matchesInvestment && matchesIRR && matchesStatus && matchesRegion && matchesESG;
+				return matchesSearch && matchesCategory && matchesInvestment && matchesIRR && matchesStatus && matchesRegion;
 			})
-			.sort((a, b) => {
-				if (sortBy === 'investment-asc') return parseInvestment(a.investment) - parseInvestment(b.investment);
-				if (sortBy === 'investment-desc') return parseInvestment(b.investment) - parseInvestment(a.investment);
-				if (sortBy === 'irr-desc') return parseFloat(b.irr.replace('%', '')) - parseFloat(a.irr.replace('%', ''));
+			.sort((a: any, b: any) => {
+				if (sortBy === 'investment-asc') return a.investmentNum - b.investmentNum;
+				if (sortBy === 'investment-desc') return b.investmentNum - a.investmentNum;
+				if (sortBy === 'irr-desc') return b.irrNum - a.irrNum;
 				if (sortBy === 'alpha') return a.title.localeCompare(b.title);
 				return 0;
 			})
@@ -710,35 +649,18 @@
 						<div class="flex flex-wrap gap-2">
 							{#each regionOptions as r}
 								<button 
-									onclick={() => toggleRegion(r)}
+									onclick={() => toggleRegion(r.id)}
 									class="px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all border cursor-pointer
-										{selectedRegions.includes(r) 
+										{selectedRegions.includes(r.id) 
 											? 'bg-bkpm-blue/10 text-bkpm-blue border-bkpm-blue/20' 
 											: 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}"
 								>
-									{r}
+									{r.label}
 								</button>
 							{/each}
 						</div>
 					</div>
 
-					<!-- ESG Rating -->
-					<div class="space-y-3">
-						<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">{m.filter_esg()}</span>
-						<div class="flex flex-wrap gap-2">
-							{#each esgOptions as esg}
-								<button 
-									onclick={() => toggleESG(esg)}
-									class="px-3 py-1.5 rounded-lg border text-[10px] font-black tracking-wide transition-all cursor-pointer
-										{selectedESG.includes(esg) 
-											? 'bg-slate-800 text-white border-slate-800' 
-											: 'bg-white text-slate-400 border-slate-200 hover:border-emerald-300'}"
-								>
-									{esg}
-								</button>
-							{/each}
-						</div>
-					</div>
 
 					<!-- IRR Range -->
 					<div class="space-y-3">
@@ -779,63 +701,7 @@
 		<!-- Project grid — more generous spacing -->
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12 max-w-[1400px] mx-auto">
 			{#each filteredProjects as project (project.id)}
-				<a
-					href="/project/{project.id}"
-					class="group bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 block relative"
-					in:fly={{ y: 20, duration: 400 }}
-				>
-					<!-- Top Right Badge (ESG) -->
-					<div class="absolute top-4 right-4 z-10 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md border border-slate-100 shadow-sm">
-						<div class="flex items-center gap-1">
-							<span class="text-[8px] font-black text-slate-400 uppercase">ESG</span>
-							<span class="text-[10px] font-black text-emerald-600">{project.esg}</span>
-						</div>
-					</div>
-
-					<!-- Image strip -->
-					<div class="h-32 w-full overflow-hidden bg-slate-100 relative">
-						<img src={project.image} alt={project.title} class="h-full w-full object-cover group-hover:scale-110 transition-transform duration-1000" />
-						<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-					</div>
-
-					<!-- Content -->
-					<div class="p-4">
-						<div class="flex items-center justify-between mb-2">
-							<div class="flex items-center gap-1.5">
-								{#if categoryIcons[project.category]}
-									{@const Icon = categoryIcons[project.category]}
-									<Icon size={11} class="text-bkpm-blue" strokeWidth={3} />
-								{/if}
-								<span class="text-[9px] font-black text-bkpm-blue uppercase tracking-widest">{project.category}</span>
-							</div>
-							<span class="text-[8px] font-black px-2 py-0.5 rounded-full bg-slate-50 text-slate-500 border border-slate-100">
-								{statusOptions.find(o => o.id === project.status)?.label || project.status}
-							</span>
-						</div>
-						<h3 class="text-sm font-black text-slate-900 mb-2 leading-tight group-hover:text-bkpm-blue transition-colors line-clamp-2">{project.title}</h3>
-						
-						<!-- Financial Strip -->
-						<div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-50 mt-auto">
-							<div class="space-y-0.5">
-								<span class="text-[7px] font-black text-slate-300 uppercase tracking-wider">{m.card_investment()}</span>
-								<div class="flex items-center gap-0.5 text-bkpm-blue font-black text-xs">
-									{formatInvestment(project.investment)}
-								</div>
-							</div>
-							<div class="space-y-0.5">
-								<span class="text-[7px] font-black text-slate-300 uppercase tracking-wider">{m.card_yield()}</span>
-								<div class="flex items-center gap-1 text-slate-800 font-black text-xs">
-									<Zap size={12} class="text-amber-500" strokeWidth={3} />{project.irr}
-								</div>
-							</div>
-						</div>
-
-						<div class="flex items-center gap-1 text-[9px] font-bold text-slate-400 mt-3">
-							<MapPin size={10} class="shrink-0 text-slate-300" />
-							<span class="truncate">{project.location}</span>
-						</div>
-					</div>
-				</a>
+				<ProjectCard {project} />
 			{:else}
 				<div class="col-span-full py-20 text-center">
 					<div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 mb-4">
