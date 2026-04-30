@@ -14,9 +14,12 @@
 		Globe,
 		Building2,
 		Layers,
-		Image
+		Image,
+		ChevronLeft,
+		ChevronRight
 	} from 'lucide-svelte';
 	import { fade } from 'svelte/transition';
+	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
 	let { data } = $props<{ data: PageData }>();
@@ -46,6 +49,40 @@
 	};
 
 	let imageError = $state(false);
+	let isExpanded = $state(false);
+	let activeGallerySlide = $state(0);
+	let currentView: 'info' | 'gallery' = $state('info');
+
+	let infographics = $derived.by(() => {
+		let items: string[] = [];
+		if (project?.galleries) {
+			items = [...project.galleries.map((g: any) => g.image_url).filter(Boolean)] as string[];
+		}
+		if (project?.infos) {
+			const infoImages = project.infos
+				.map((i: any) => i.url_rest || i.nama)
+				.filter((url: any) => url && typeof url === 'string' && url.match(/\.(jpeg|jpg|gif|png)$/i)) as string[];
+			items = [...items, ...infoImages];
+		}
+		return [...new Set(items)];
+	});
+
+	let documents = $derived.by(() => {
+		if (!project?.infos) return [];
+		return project.infos.filter((i: any) => {
+			const url = i.url_rest || i.nama;
+			return !(url && typeof url === 'string' && url.match(/\.(jpeg|jpg|gif|png)$/i));
+		});
+	});
+
+	onMount(() => {
+		if (infographics.length > 1) {
+			const interval = setInterval(() => {
+				activeGallerySlide = (activeGallerySlide + 1) % infographics.length;
+			}, 4000);
+			return () => clearInterval(interval);
+		}
+	});
 </script>
 
 
@@ -68,16 +105,15 @@
 		{/if}
 		<div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
 		
-		<div class="absolute top-8 left-8">
-			<a href="/" class="inline-flex items-center text-xs font-black text-white/80 hover:text-white transition-colors uppercase tracking-widest px-4 py-2 bg-black/20 backdrop-blur-md rounded-xl border border-white/10">
-				<ArrowLeft size={14} strokeWidth={3} class="mr-2" />
-				{m.proj_back()}
-			</a>
+
+
+		<div class="absolute top-8 right-8 flex items-center space-x-3">
+			<!-- Share button removed from here -->
 		</div>
 
 		<div class="absolute bottom-0 left-0 w-full p-8 md:p-12">
 			<div class="max-w-7xl mx-auto">
-				<div class="flex flex-wrap items-center gap-2 mb-6">
+				<div class="flex flex-wrap items-center gap-3 mb-6">
 					<!-- Sector Badge -->
 					{#if project.nama_sektor_peluang}
 						<div class="h-8 px-3 flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
@@ -85,19 +121,11 @@
 							<span class="text-[10px] font-black text-white uppercase tracking-widest">{project.nama_sektor_peluang}</span>
 						</div>
 					{/if}
-					<!-- Tier Badge -->
-					{#if project.nama_sektor}
-						<div class="h-8 px-3 flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
-							<Layers size={14} strokeWidth={3} class="text-white/60" />
-							<span class="text-[10px] font-black text-white/80 uppercase tracking-widest">{project.nama_sektor}</span>
-						</div>
-					{/if}
-					<!-- Status Badge -->
-					{#if project.status}
-						<div class="h-8 px-3 flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
-							<span class="text-[10px] font-black text-white uppercase tracking-widest">{project.status}</span>
-						</div>
-					{/if}
+					
+					<!-- Share Button (Moved here) -->
+					<button class="h-8 w-8 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all cursor-pointer">
+						<Share2 size={14} strokeWidth={2.5} />
+					</button>
 				</div>
 				<h1 class="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight mb-4 drop-shadow-2xl">
 					{project.nama}
@@ -109,143 +137,295 @@
 	<!-- Project Header Meta -->
 	<div class="bg-white border-b border-slate-200">
 		<div class="max-w-7xl mx-auto px-6 lg:px-8 py-8 md:py-10">
-			<div class="flex flex-col md:flex-row md:items-center justify-between gap-8">
-				<div class="max-w-3xl">
-					<p class="text-xl font-medium text-slate-500 leading-relaxed italic border-l-4 border-bkpm-blue pl-6">
-						{project.deskripsi || m.proj_dummy_desc()}
-					</p>
-				</div>
-				
-				<div class="flex items-center space-x-3 shrink-0">
-					<button class="p-4 rounded-2xl border border-slate-200 text-slate-400 hover:text-bkpm-blue hover:border-bkpm-blue transition-all bg-white cursor-pointer shadow-sm">
-						<Share2 size={20} strokeWidth={2.5} />
-					</button>
-					<button class="flex items-center space-x-3 px-8 py-4 bg-bkpm-blue text-white rounded-2xl font-black uppercase text-sm tracking-widest shadow-xl shadow-bkpm-blue/30 hover:bg-bkpm-blue/90 hover:-translate-y-0.5 transition-all cursor-pointer">
-						<Download size={18} strokeWidth={3} />
-						<span>{m.proj_download()}</span>
-					</button>
-				</div>
+			<div class="max-w-none">
+				<p class="text-sm font-medium text-slate-500 leading-relaxed italic border-l-4 border-bkpm-blue pl-6 {isExpanded ? '' : 'line-clamp-2'}">
+					{project.deskripsi || m.proj_dummy_desc()}
+				</p>
+				<button 
+					onclick={() => isExpanded = !isExpanded}
+					class="mt-2 ml-6 text-[10px] font-black uppercase tracking-widest text-bkpm-blue hover:text-bkpm-blue/80 transition-colors cursor-pointer"
+				>
+					{isExpanded ? 'Show Less' : 'Read More'}
+				</button>
 			</div>
 		</div>
 	</div>
 
 	<!-- Main Content Area -->
 	<div class="max-w-7xl mx-auto px-6 lg:px-8 mt-8 md:mt-12">
+		
+		<!-- Innovation Pillars / Key Attributes -->
+		<section class="mb-12">
+			<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
+				<Zap size={20} class="mr-2 text-bkpm-blue" />
+				Key Project Attributes
+			</h3>
+			
+			<div class="bg-slate-100 rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+				<div class="grid grid-cols-2 md:grid-cols-3 gap-px">
+					<!-- Scheme -->
+					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
+						<div class="flex items-center gap-2 mb-0.5">
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Business Scheme</span>
+						</div>
+						<span class="text-sm font-black text-slate-900">{project.details?.skema_kerja_sama || "TBD"}</span>
+					</div>
+					
+					<!-- Land -->
+					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
+						<div class="flex items-center gap-2 mb-0.5">
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Land Area</span>
+						</div>
+						<span class="text-sm font-black text-slate-900">{project.details?.luas_lahan || "TBD"}</span>
+					</div>
+					
+					<!-- Region -->
+					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
+						<div class="flex items-center gap-2 mb-0.5">
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Region</span>
+						</div>
+						<span class="text-sm font-black text-slate-900">
+							<a href="/regions?id={project.id_adm_provinsi}" class="hover:text-bkpm-blue transition-colors" title="{project.nama_kabkot || ''}, {project.nama_provinsi || ''}">
+								{project.nama_kabkot || ''}{project.nama_kabkot && project.nama_provinsi ? ', ' : ''}{project.nama_provinsi || ''}
+							</a>
+						</span>
+					</div>
+					
+					<!-- KBLI -->
+					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
+						<div class="flex items-center gap-2 mb-0.5">
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">KBLI Code</span>
+						</div>
+						<span class="text-sm font-black text-slate-900">{project.details?.kode_kbli || "N/A"}</span>
+					</div>
+
+					<!-- Government Agency -->
+					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
+						<div class="flex items-center gap-2 mb-0.5">
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">{m.fact_agency()}</span>
+						</div>
+						<span class="text-sm font-black text-slate-900 line-clamp-1" title={project.details?.contact_name || 'Ministry of Investment'}>
+							{project.details?.contact_name || 'Ministry of Investment'}
+						</span>
+					</div>
+
+					<!-- Document Status -->
+					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
+						<div class="flex items-center gap-2 mb-0.5">
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">{m.fact_status()}</span>
+						</div>
+						<span class="text-sm font-black text-slate-900">{project.status || project.status_proyek || 'Active'}</span>
+					</div>
+				</div>
+			</div>
+		</section>
+
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
 			
-			<!-- Left Column: Details -->
-			<div class="lg:col-span-2 space-y-12">
-				
-				<!-- Executive Summary -->
-				<section>
-					<h3 class="text-2xl font-black text-slate-900 tracking-tight mb-6 flex items-center">
-						<FileText size={24} class="mr-3 text-bkpm-blue" />
-						{m.proj_exec_summary()}
-					</h3>
-					<div class="prose prose-slate max-w-none text-slate-600 font-medium leading-relaxed space-y-4">
-						<p>{project.deskripsi || m.proj_dummy_p1()}</p>
-						{#if project.details?.alamat}
-							<p><strong>Address:</strong> {project.details.alamat}</p>
-						{/if}
-					</div>
-				</section>
 
-				<!-- Innovation Pillars / Key Attributes -->
-				<section>
-					<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
-						<Zap size={20} class="mr-2 text-bkpm-blue" />
-						Key Project Attributes
-					</h3>
-					
-					<div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-12">
-						<div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-100">
-							<!-- Scheme -->
-							<div class="p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
-								<div class="flex items-center gap-2 mb-0.5">
-									<Globe size={12} class="text-bkpm-blue" />
-									<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Business Scheme</span>
+			<!-- Left Column: Details -->
+			<div class="lg:col-span-2 space-y-12 transition-all duration-500">
+				
+				{#if currentView === 'info'}
+				<div in:fade={{ duration: 300, delay: 150 }} class="space-y-12">
+					<!-- Readiness / Impact -->
+					<section>
+						<h3 class="text-2xl font-black text-slate-900 tracking-tight mb-8 flex items-center">
+							<TrendingUp size={24} class="mr-3 text-bkpm-blue" />
+							Project Readiness
+						</h3>
+						
+						<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+							<!-- Current Phase Card -->
+							<div class="relative bg-white rounded-2xl p-6 text-slate-900 border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between">
+								<div class="absolute -right-8 -top-8 w-24 h-24 bg-bkpm-blue/5 blur-2xl rounded-full"></div>
+								<div class="relative z-10 flex items-center justify-between mb-4">
+									<span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Current Phase</span>
+									<div class="h-2 w-2 rounded-full bg-logo-green animate-pulse"></div>
 								</div>
-								<span class="text-sm font-black text-slate-900">{project.details?.skema_kerja_sama || "TBD"}</span>
+								<div class="relative z-10 space-y-2 mt-auto">
+									<h4 class="text-base font-black tracking-tight text-slate-900">{project.details?.readiness_status || "DIMINATI"}</h4>
+									<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+										<div class="h-full bg-bkpm-blue w-2/3 rounded-full"></div>
+									</div>
+									<p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">
+										Late-stage preparation phase
+									</p>
+								</div>
 							</div>
-							
-							<!-- Land -->
-							<div class="p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
-								<div class="flex items-center gap-2 mb-0.5">
-									<Layers size={12} class="text-logo-green" />
-									<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Land Area</span>
+
+							<!-- Investment Priority Card -->
+							<div class="relative bg-white rounded-2xl p-6 text-slate-900 border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between">
+								<div class="absolute -right-8 -top-8 w-24 h-24 bg-logo-green/5 blur-2xl rounded-full"></div>
+								<div class="relative z-10 mb-4">
+									<span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Investment Priority</span>
 								</div>
-								<span class="text-sm font-black text-slate-900">{project.details?.luas_lahan || "TBD"}</span>
+								<div class="relative z-10 mt-auto">
+									<div class="inline-flex items-center px-2 py-1 mb-2 rounded-md bg-logo-green/10 border border-logo-green/20">
+										<CheckCircle2 size={10} class="text-logo-green mr-1.5" />
+										<span class="text-[9px] font-black text-logo-green uppercase tracking-widest">Priority High</span>
+									</div>
+									<h4 class="text-[15px] font-black leading-tight text-slate-800">
+										{project.details?.is_ipro ? 'Investment Project Ready to Offer (IPRO)' : 'Strategic National Project'}
+									</h4>
+								</div>
 							</div>
-							
-							<!-- Region -->
-							<div class="p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
-								<div class="flex items-center gap-2 mb-0.5">
-									<MapPin size={12} class="text-amber-500" />
-									<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Region</span>
+
+							<!-- SEZ Card -->
+							<div class="relative bg-white rounded-2xl p-6 text-slate-900 border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between">
+								<div class="absolute -right-8 -top-8 w-24 h-24 bg-amber-500/5 blur-2xl rounded-full"></div>
+								<div class="relative z-10 mb-4">
+									<span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Economic Zone Status</span>
 								</div>
-								<span class="text-sm font-black text-slate-900 line-clamp-1">
-									<a href="/regions?id={project.id_adm_provinsi}" class="hover:text-bkpm-blue transition-colors" title="{project.nama_kabkot || ''}, {project.nama_provinsi || ''}">
-										{project.nama_kabkot || ''}{project.nama_kabkot && project.nama_provinsi ? ', ' : ''}{project.nama_provinsi || ''}
-									</a>
-								</span>
-							</div>
-							
-							<!-- KBLI -->
-							<div class="p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
-								<div class="flex items-center gap-2 mb-0.5">
-									<ShieldCheck size={12} class="text-purple-500" />
-									<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">KBLI Code</span>
+								<div class="relative z-10 mt-auto space-y-2">
+									<h4 class="text-[13px] font-black text-slate-800 leading-snug line-clamp-3">
+										{project.details?.lokasi_kawasan || "Destinasi Pariwisata Prioritas Raja Ampat"}
+									</h4>
+									<div class="flex items-center gap-2">
+										<div class="flex -space-x-1">
+											<div class="w-5 h-5 rounded-full bg-bkpm-blue border border-white flex items-center justify-center">
+												<Globe size={10} class="text-white" />
+											</div>
+											<div class="w-5 h-5 rounded-full bg-logo-green border border-white"></div>
+										</div>
+										<p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Verified Special Zone</p>
+									</div>
 								</div>
-								<span class="text-sm font-black text-slate-900">{project.details?.kode_kbli || "N/A"}</span>
 							</div>
 						</div>
-					</div>
-				</section>
-				
-				<!-- Readiness / Impact -->
-				<section>
-					<h3 class="text-2xl font-black text-slate-900 tracking-tight mb-6 flex items-center">
-						<TrendingUp size={24} class="mr-3 text-bkpm-blue" />
-						Project Readiness
-					</h3>
-					<div class="bg-slate-900 rounded-3xl p-8 md:p-10 text-white relative overflow-hidden">
-						<!-- BG Decor -->
-						<div class="absolute -right-20 -top-20 w-64 h-64 bg-bkpm-blue blur-[100px] opacity-30 rounded-full"></div>
-						<div class="absolute -left-20 -bottom-20 w-64 h-64 bg-logo-green blur-[100px] opacity-20 rounded-full"></div>
+					</section>
+
+					<!-- Investment Incentives -->
+					{#if project.incentives && project.incentives.length > 0}
+					<section>
+						<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
+							<ShieldCheck size={20} class="mr-2 text-bkpm-blue" />
+							Investment Incentives
+						</h3>
+						<div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-8 space-y-6">
+							{#each project.incentives as incentive}
+								<div class="border-b border-slate-100 last:border-0 pb-6 last:pb-0">
+									<h4 class="text-sm font-black text-slate-900 mb-2">{incentive.nama}</h4>
+									{#if incentive.keterangan}
+										<p class="text-sm text-slate-500 leading-relaxed">{incentive.keterangan}</p>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					</section>
+					{/if}
+
+					<!-- Additional Information (Documents) -->
+					{#if documents && documents.length > 0}
+					<section>
+						<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
+							<FileText size={20} class="mr-2 text-bkpm-blue" />
+							Additional Information
+						</h3>
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							{#each documents as info}
+								<div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 hover:shadow-md transition-shadow flex flex-col justify-between">
+									<h4 class="text-sm font-black text-slate-900 mb-3 break-all line-clamp-2" title={info.nama}>
+										{info.nama && info.nama.startsWith('http') ? 'Project Document' : info.nama}
+									</h4>
+									{#if info.url_rest || (info.nama && info.nama.startsWith('http'))}
+										<a href={info.url_rest || info.nama} target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-xs font-bold text-bkpm-blue hover:text-bkpm-blue/80 uppercase tracking-widest transition-colors">
+											<Download size={14} class="mr-1.5" strokeWidth={3} />
+											View Document
+										</a>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					</section>
+					{/if}
+				</div>
+				{/if}
+
+				{#if currentView === 'gallery'}
+				<div in:fade={{ duration: 300, delay: 150 }} class="space-y-12">
+					<!-- Project Infographics Carousel -->
+					{#if infographics && infographics.length > 0}
+					<section>
+						<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
+							<Image size={20} class="mr-2 text-bkpm-blue" />
+							Project Infographics
+						</h3>
 						
-						<ul class="relative z-10 space-y-6">
-							<li class="flex items-start space-x-4">
-								<CheckCircle2 size={24} class="text-logo-green shrink-0 mt-0.5" strokeWidth={3} />
-								<div>
-									<h5 class="text-lg font-black mb-1">Current Phase</h5>
-									<p class="text-slate-400 font-medium text-sm">{project.details?.readiness_status || project.project_status_enum || "Pre-Feasibility Study"}</p>
+						<div class="relative rounded-3xl overflow-hidden bg-slate-900 aspect-video md:aspect-[21/9] group shadow-sm border border-slate-200">
+							{#each infographics as imgUrl, i}
+								<div class="absolute inset-0 transition-opacity duration-1000 ease-in-out {i === activeGallerySlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}">
+									<img 
+										src={safeUrl(imgUrl)} 
+										alt="Project Infographic {i + 1}" 
+										class="w-full h-full object-cover"
+									/>
 								</div>
-							</li>
-							<li class="flex items-start space-x-4">
-								<CheckCircle2 size={24} class="text-logo-green shrink-0 mt-0.5" strokeWidth={3} />
-								<div>
-									<h5 class="text-lg font-black mb-1">Investment Priority</h5>
-									<p class="text-slate-400 font-medium text-sm">{project.details?.is_ipro ? 'Investment Project Ready to Offer (IPRO)' : 'Strategic National Project'}</p>
-								</div>
-							</li>
-							{#if project.details?.lokasi_kawasan}
-							<li class="flex items-start space-x-4">
-								<CheckCircle2 size={24} class="text-logo-green shrink-0 mt-0.5" strokeWidth={3} />
-								<div>
-									<h5 class="text-lg font-black mb-1">Special Economic Zone</h5>
-									<p class="text-slate-400 font-medium text-sm">{project.details.lokasi_kawasan}</p>
-								</div>
-							</li>
+							{/each}
+							
+							<!-- Indicators & Navigation -->
+							{#if infographics.length > 1}
+							<!-- Navigation Arrows -->
+							<button 
+								class="absolute left-4 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur-md transition-colors cursor-pointer border border-white/10 opacity-0 group-hover:opacity-100"
+								onclick={() => activeGallerySlide = (activeGallerySlide - 1 + infographics.length) % infographics.length}
+								aria-label="Previous slide"
+							>
+								<ChevronLeft size={20} strokeWidth={2.5} />
+							</button>
+
+							<button 
+								class="absolute right-4 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur-md transition-colors cursor-pointer border border-white/10 opacity-0 group-hover:opacity-100"
+								onclick={() => activeGallerySlide = (activeGallerySlide + 1) % infographics.length}
+								aria-label="Next slide"
+							>
+								<ChevronRight size={20} strokeWidth={2.5} />
+							</button>
+
+							<div class="absolute bottom-6 left-0 right-0 z-20 flex justify-center gap-2">
+								{#each infographics as _, i}
+									<button 
+										class="h-2 rounded-full transition-all duration-300 cursor-pointer {i === activeGallerySlide ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}"
+										onclick={() => activeGallerySlide = i}
+										aria-label="Go to slide {i + 1}"
+									></button>
+								{/each}
+							</div>
 							{/if}
-						</ul>
+						</div>
+					</section>
+					{:else}
+					<div class="py-20 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
+						<Image size={48} strokeWidth={1} class="mx-auto text-slate-300 mb-4" />
+						<p class="text-slate-500 font-medium">No media available for this project.</p>
 					</div>
-				</section>
+					{/if}
+				</div>
+				{/if}
 
 			</div>
 
+
 			<!-- Right Column: Sidebar Factsheet -->
 			<div class="lg:col-span-1">
-				<div class="sticky top-8 bg-white rounded-[32px] border border-slate-200 shadow-xl shadow-slate-200/50 p-8">
+				<div class="sticky top-8 space-y-4">
+					<!-- View Switcher -->
+					<div class="flex items-center p-1.5 bg-slate-100/80 backdrop-blur-md border border-slate-200/50 rounded-full mb-6 relative shadow-inner">
+						<div class="absolute inset-y-1.5 w-[calc(50%-6px)] bg-white rounded-full shadow-sm transition-all duration-300 ease-out {currentView === 'gallery' ? 'left-[calc(50%+3px)]' : 'left-1.5'}"></div>
+						<button 
+							class="flex-1 py-3 px-4 rounded-full text-[10px] font-black uppercase tracking-widest relative z-10 transition-colors {currentView === 'info' ? 'text-bkpm-blue' : 'text-slate-500 hover:text-slate-700'}"
+							onclick={() => currentView = 'info'}
+						>
+							Info View
+						</button>
+						<button 
+							class="flex-1 py-3 px-4 rounded-full text-[10px] font-black uppercase tracking-widest relative z-10 transition-colors {currentView === 'gallery' ? 'text-bkpm-blue' : 'text-slate-500 hover:text-slate-700'}"
+							onclick={() => currentView = 'gallery'}
+						>
+							Gallery View
+						</button>
+					</div>
+					<div class="bg-white rounded-[32px] border border-slate-200 shadow-xl shadow-slate-200/50 p-8">
 					<h3 class="text-[10px] font-black uppercase tracking-wide text-slate-400 mb-6 flex items-center">
 						{m.proj_factsheet()}
 					</h3>
@@ -284,59 +464,54 @@
 							</div>
 						</div>
 
-						<div class="h-[1px] w-full bg-slate-100"></div>
 
-						<!-- Core Details -->
+						<!-- Contacts -->
+						{#if project.contacts && project.contacts.length > 0}
+						<div class="h-[1px] w-full bg-slate-100 mt-8 mb-8"></div>
 						<div class="space-y-4">
-							<div class="flex items-start space-x-3">
-								<MapPin size={18} class="text-slate-400 mt-0.5 shrink-0" />
-								<div>
-									<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Location</div>
-									<div class="text-sm font-bold text-slate-900">
-										{project.nama_kabkot || ''}{project.nama_kabkot && project.nama_provinsi ? ', ' : ''}{project.nama_provinsi || ''}
+							<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-4">Project Contacts</div>
+							{#each project.contacts as contact}
+								<div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-100/60">
+									<div class="font-black text-[15px] leading-snug text-slate-900 mb-3">{contact.nama}</div>
+									<div class="space-y-2">
+										{#if contact.email}
+											<div class="text-[13px] flex items-start gap-2">
+												<span class="font-bold text-slate-400 w-12 shrink-0">Email:</span> 
+												<span class="text-slate-600 break-all">{contact.email}</span>
+											</div>
+										{/if}
+										{#if contact.telepon}
+											<div class="text-[13px] flex items-start gap-2">
+												<span class="font-bold text-slate-400 w-12 shrink-0">Phone:</span> 
+												<span class="text-slate-600">{contact.telepon}</span>
+											</div>
+										{/if}
 									</div>
 								</div>
-							</div>
-							
-							<div class="flex items-start space-x-3">
-								<Building2 size={18} class="text-slate-400 mt-0.5 shrink-0" />
-								<div>
-									<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.fact_agency()}</div>
-									<div class="text-sm font-bold text-slate-900 truncate max-w-[150px]" title={project.details?.contact_name || 'BKPM'}>
-										{project.details?.contact_name || 'Ministry of Investment'}
-									</div>
-								</div>
-							</div>
-
-							<div class="flex items-start space-x-3">
-								<BarChart3 size={18} class="text-slate-400 mt-0.5 shrink-0" />
-								<div>
-									<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.fact_status()}</div>
-									<div class="text-sm font-bold text-slate-900">{project.status || project.status_proyek || 'Active'}</div>
-								</div>
-							</div>
+							{/each}
 						</div>
-					</div>
-
-					<!-- Primary Action -->
-					<div class="mt-8 pt-8 border-t border-slate-100">
-						<button class="w-full py-4 bg-logo-green text-white rounded-2xl font-black uppercase text-xs tracking-wide shadow-lg shadow-logo-green/20 hover:bg-logo-green/90 hover:-translate-y-0.5 transition-all mb-3 cursor-pointer">
-							{m.proj_btn_interest()}
-						</button>
-						{#if project.details?.contact_email}
-							<a href="mailto:{project.details.contact_email}" class="block w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer text-center">
-								{m.proj_btn_meeting()}
-							</a>
-						{:else}
-							<button class="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold text-xs hover:bg-slate-100 transition-colors cursor-pointer">
-								{m.proj_btn_meeting()}
-							</button>
 						{/if}
+
+						<!-- Primary Action -->
+						<div class="mt-8 pt-8 border-t border-slate-100 space-y-3">
+							<button class="w-full py-4 bg-logo-green text-white rounded-2xl font-black uppercase text-xs tracking-wide shadow-lg shadow-logo-green/20 hover:bg-logo-green/90 hover:-translate-y-0.5 transition-all cursor-pointer">
+								{m.proj_btn_interest()}
+							</button>
+							{#if project.details?.contact_email}
+								<a href="mailto:{project.details.contact_email}" class="block w-full py-4 bg-white text-slate-700 rounded-2xl font-black uppercase text-xs tracking-wide shadow-sm border border-slate-100 hover:bg-slate-50 hover:-translate-y-0.5 transition-all cursor-pointer text-center">
+									{m.proj_btn_meeting()}
+								</a>
+							{:else}
+								<button class="w-full py-4 bg-white text-slate-700 rounded-2xl font-black uppercase text-xs tracking-wide shadow-sm border border-slate-100 hover:bg-slate-50 hover:-translate-y-0.5 transition-all cursor-pointer">
+									{m.proj_btn_meeting()}
+								</button>
+							{/if}
+						</div>
 					</div>
 				</div>
 			</div>
+		</div>
 
 		</div>
 	</div>
 </div>
-
