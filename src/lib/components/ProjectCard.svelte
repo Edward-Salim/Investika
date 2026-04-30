@@ -157,6 +157,15 @@
 						goto(`/regions?id=${project.provinceId}`);
 					}
 				}}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						e.stopPropagation();
+						if (project.provinceId) {
+							goto(`/regions?id=${project.provinceId}`);
+						}
+					}
+				}}
 				class="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-2 hover:text-bkpm-blue transition-colors cursor-pointer text-left w-fit"
 				role="button"
 				tabindex="0"

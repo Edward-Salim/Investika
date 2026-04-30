@@ -32,7 +32,11 @@
 	let isSidebarOpen = $state(true);
 	let isLangMenuOpen = $state(false);
 	let isProfileMenuOpen = $state(false);
-	let isAuthPage = $derived(page.url.pathname === '/login' || page.url.pathname === '/onboarding');
+	let isAuthPage = $derived(
+		page.url.pathname === '/login' || 
+		page.url.pathname === '/onboarding' ||
+		/^\/(en|id|zh|ja|ko)\/(login|onboarding)$/.test(page.url.pathname)
+	);
 	let pathSegments = $derived(page.url.pathname.split('/').filter(Boolean));
 	let isOverviewPage = $derived(
 		page.url.pathname === '/' ||
