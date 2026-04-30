@@ -11,6 +11,7 @@
 	import type { PageData } from './$types';
 	import { compareStore } from '$lib/state/compare.svelte';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
+	import ProjectCardSkeleton from '$lib/components/ProjectCardSkeleton.svelte';
 	import vestiAIAsk from '$lib/assets/logos/vestiAI-ask.png';
 
 	let { data } = $props<{ data: PageData }>();
@@ -327,10 +328,10 @@
 		}
 
 		clearAdvancedFilters();
-		activeFilter = 'All';
 		isSearching = true;
 		isAiSummaryExpanded = true;
 		committedSearch = query;
+		searchStore.isLoading = true;
 
 		try {
 			const response = await fetch('/api/ai-search-projects', {
@@ -355,6 +356,7 @@
 			displayedProjects = data.projects;
 			aiSummary = m.home_ai_search_error();
 		} finally {
+			searchStore.isLoading = false;
 			if (collapseTimeout) clearTimeout(collapseTimeout);
 			collapseTimeout = setTimeout(() => {
 				isAiSummaryExpanded = false;
@@ -394,11 +396,6 @@
 <!-- Full-height column layout: projects fill top, search bar fixed at bottom -->
 <div class="w-full h-full flex flex-col overflow-hidden">
 
-{#if data.dbError}
-	<div class="bg-red-500 text-white text-[10px] py-1 px-4 font-mono text-center z-[100]">
-		DEBUG ERROR: {data.dbError}
-	</div>
-{/if}
 
 {#if !isSearching}
 	<!-- ── INITIAL HERO VIEW (before first search) ── -->
@@ -681,20 +678,26 @@
 
 		<!-- Project grid — more generous spacing -->
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12 max-w-[1400px] mx-auto">
-			{#each filteredProjects as project (project.id)}
-				<ProjectCard {project} />
+			{#if searchStore.isLoading}
+				{#each Array(6) as _}
+					<ProjectCardSkeleton />
+				{/each}
 			{:else}
-				<div class="col-span-full py-20 text-center">
-					<div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 mb-4">
-						<SlidersHorizontal size={24} class="text-slate-200" />
+				{#each filteredProjects as project (project.id)}
+					<ProjectCard {project} />
+				{:else}
+					<div class="col-span-full py-20 text-center">
+						<div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 mb-4">
+							<SlidersHorizontal size={24} class="text-slate-200" />
+						</div>
+						<h3 class="text-xl font-black text-slate-800 mb-2">{m.no_results_title()}</h3>
+						<p class="text-slate-400 font-medium">{m.no_results_desc()}</p>
+						<button onclick={resetSearch} class="mt-6 px-6 py-2 bg-bkpm-blue text-white rounded-xl font-black text-xs uppercase tracking-wide cursor-pointer hover:bg-bkpm-blue/90 transition-all">
+							{m.btn_clear_filters()}
+						</button>
 					</div>
-					<h3 class="text-xl font-black text-slate-800 mb-2">{m.no_results_title()}</h3>
-					<p class="text-slate-400 font-medium">{m.no_results_desc()}</p>
-					<button onclick={resetSearch} class="mt-6 px-6 py-2 bg-bkpm-blue text-white rounded-xl font-black text-xs uppercase tracking-wide cursor-pointer hover:bg-bkpm-blue/90 transition-all">
-						{m.btn_clear_filters()}
-					</button>
-				</div>
-			{/each}
+				{/each}
+			{/if}
 		</div>
 	</div>
 

@@ -25,5 +25,5 @@ if (!db) {
 	console.error('Database connection could not be initialized.');
 }
 
-// Final trigger for IPv4 pooler update (aws-1)
+// Database connection finalized
 

@@ -4,6 +4,7 @@ const STORAGE_KEY = 'investika_search_state';
 
 const initialState = {
 	isSearching: false,
+	isLoading: false,
 	inputValue: '',
 	aiSummary: '',
 	isAiSummaryExpanded: false,

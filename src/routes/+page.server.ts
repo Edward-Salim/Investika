@@ -46,8 +46,7 @@ export const load: PageServerLoad = async () => {
 	} catch (error: any) {
 		console.error('Main load error:', error);
 		return {
-			projects: getMockProjects().map(mapProjectToCard),
-			dbError: error?.message || 'Unknown database error'
+			projects: getMockProjects().map(mapProjectToCard)
 		};
 	}
 };
