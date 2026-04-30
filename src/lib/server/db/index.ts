@@ -8,9 +8,11 @@ const client = env.DATABASE_URL
 			max: 5,
 			idle_timeout: 30,
 			connect_timeout: 10,
-			prepare: false
+			prepare: false,
+			ssl: 'require'
 		})
 	: null;
+
 
 export const db = client ? drizzle(client, { schema }) : null;
 
