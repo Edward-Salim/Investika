@@ -43,10 +43,12 @@ export const load: PageServerLoad = async () => {
 				}))
 				.map(mapProjectToCard)
 		};
-	} catch (error) {
+	} catch (error: any) {
 		console.error('Main load error:', error);
 		return {
-			projects: getMockProjects().map(mapProjectToCard)
+			projects: getMockProjects().map(mapProjectToCard),
+			dbError: error?.message || 'Unknown database error'
 		};
 	}
 };
+

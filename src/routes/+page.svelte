@@ -394,6 +394,12 @@
 <!-- Full-height column layout: projects fill top, search bar fixed at bottom -->
 <div class="w-full h-full flex flex-col overflow-hidden">
 
+{#if data.dbError}
+	<div class="bg-red-500 text-white text-[10px] py-1 px-4 font-mono text-center z-[100]">
+		DEBUG ERROR: {data.dbError}
+	</div>
+{/if}
+
 {#if !isSearching}
 	<!-- ── INITIAL HERO VIEW (before first search) ── -->
 	<AuroraBackground class="flex-1 w-full">
