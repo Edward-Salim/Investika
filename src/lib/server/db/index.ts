@@ -24,3 +24,4 @@ export const db = client ? drizzle(client, { schema }) : null;
 if (!db) {
 	console.error('Database connection could not be initialized.');
 }
+
