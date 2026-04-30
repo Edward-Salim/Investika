@@ -139,6 +139,26 @@ function normalizeArray<T>(input: unknown, label: string, normalizeItem: (value:
 	return input.map(normalizeItem);
 }
 
+function getRequiredJoinForField(field: ProjectSearchField) {
+	if (field === 'adm_provinces.nama') {
+		return 'adm_provinces';
+	}
+
+	if (field === 'adm_regencies.nama') {
+		return 'adm_regencies';
+	}
+
+	if (
+		field === 'investment_opportunity_details.is_ikn' ||
+		field === 'investment_opportunity_details.is_ipro' ||
+		field === 'investment_opportunity_details.readiness_status'
+	) {
+		return 'investment_opportunity_details';
+	}
+
+	return null;
+}
+
 export function validateProjectSearchPlan(input: unknown): ProjectSearchPlan {
 	const plan = asRecord(input);
 
@@ -163,12 +183,31 @@ export function validateProjectSearchPlan(input: unknown): ProjectSearchPlan {
 		throw new Error('Project search plan limit must be a positive number.');
 	}
 
+	const joins = normalizeArray(plan.joins, 'joins', normalizeJoin);
+	const filters = normalizeArray(plan.filters, 'filters', normalizeFilter);
+	const sort = normalizeArray(plan.sort, 'sort', normalizeSort);
+	const joinedTables = new Set(joins.map(join => join.to));
+
+	for (const filter of filters) {
+		const requiredJoin = getRequiredJoinForField(filter.field);
+		if (requiredJoin && !joinedTables.has(requiredJoin)) {
+			throw new Error(`Project search plan filter field ${filter.field} requires the ${requiredJoin} join.`);
+		}
+	}
+
+	for (const sortRule of sort) {
+		const requiredJoin = getRequiredJoinForField(sortRule.field);
+		if (requiredJoin && !joinedTables.has(requiredJoin)) {
+			throw new Error(`Project search plan sort field ${sortRule.field} requires the ${requiredJoin} join.`);
+		}
+	}
+
 	return {
 		intent: 'find_projects',
 		base_table: 'investment_opportunities',
-		joins: normalizeArray(plan.joins, 'joins', normalizeJoin),
-		filters: normalizeArray(plan.filters, 'filters', normalizeFilter),
-		sort: normalizeArray(plan.sort, 'sort', normalizeSort),
+		joins,
+		filters,
+		sort,
 		limit: Math.min(rawLimit, MAX_LIMIT),
 		select_strategy: 'project_cards',
 		explanation: plan.explanation.trim()

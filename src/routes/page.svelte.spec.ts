@@ -125,4 +125,62 @@ describe('+page.svelte', () => {
 
 		expect(mockFetch).not.toHaveBeenCalled();
 	});
+
+	it('clear all restores the base project list after an AI search', async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({
+				summary: 'Found energy projects in Sulawesi.',
+				projects: [
+					{
+						id: '99',
+						title: 'Sulawesi Solar Hub',
+						category: 'Energy',
+						status: 'Ready to Offer',
+						location: 'Central Sulawesi',
+						investment: '$120M',
+						npv: '$40M',
+						irr: '18%',
+						image: null,
+						provinceId: 72,
+						investmentNum: 120,
+						irrNum: 18,
+						npvNum: 40,
+						wilayah: null
+					}
+				]
+			})
+		});
+
+		render(HomePage, {
+			data: {
+				user: null,
+				session: null,
+				isProtoAuth: false,
+				projects: [
+					{
+						id: '1',
+						title: 'Existing Project',
+						category: 'Tourism',
+						status: 'Active',
+						location: 'Bali',
+						investment: '$10M',
+						npv: '$2M',
+						irr: '12%',
+						image: null,
+						provinceId: 51,
+						investmentNum: 10,
+						irrNum: 12,
+						npvNum: 2,
+						wilayah: null
+					}
+				]
+			}
+		});
+
+		await fillSearch('energy projects in Sulawesi');
+		await expect.element(page.getByText('Sulawesi Solar Hub')).toBeInTheDocument();
+		await page.getByTitle(/reset/i).click();
+		await expect.element(page.getByText('Existing Project')).toBeInTheDocument();
+	});
 });

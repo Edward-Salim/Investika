@@ -116,6 +116,7 @@
 	}
 
 	function clearAll() {
+		displayedProjects = data.projects;
 		inputValue = '';
 		committedSearch = '';
 		aiSummary = '';

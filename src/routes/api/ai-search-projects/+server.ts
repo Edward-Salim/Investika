@@ -21,7 +21,6 @@ export async function POST({ request }: { request: Request }) {
 
 		return json({
 			summary: plan.explanation,
-			appliedPlan: plan,
 			projects
 		});
 	} catch (error) {

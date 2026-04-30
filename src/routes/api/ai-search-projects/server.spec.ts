@@ -50,7 +50,7 @@ describe('POST /api/ai-search-projects', () => {
 		expect(response.status).toBe(503);
 	});
 
-	it('returns 200 with summary, appliedPlan, and projects on success', async () => {
+	it('returns 200 with summary and projects on success', async () => {
 		const plan = {
 			intent: 'find_projects',
 			base_table: 'investment_opportunities',
@@ -77,7 +77,6 @@ describe('POST /api/ai-search-projects', () => {
 		expect(response.status).toBe(200);
 		expect(body).toEqual({
 			summary: 'Searching energy projects.',
-			appliedPlan: plan,
 			projects
 		});
 	});

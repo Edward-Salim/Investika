@@ -119,4 +119,45 @@ describe('validateProjectSearchPlan', () => {
 			to: 'adm_provinces'
 		});
 	});
+
+	it('rejects joined-table filters when the required join is missing', () => {
+		expect(() =>
+			validateProjectSearchPlan({
+				intent: 'find_projects',
+				base_table: 'investment_opportunities',
+				joins: [],
+				filters: [
+					{
+						field: 'adm_regencies.nama',
+						operator: 'ilike',
+						value: 'Denpasar'
+					}
+				],
+				sort: [],
+				limit: 12,
+				select_strategy: 'project_cards',
+				explanation: 'Searching by regency.'
+			})
+		).toThrow(/join/i);
+	});
+
+	it('rejects joined-table sorts when the required join is missing', () => {
+		expect(() =>
+			validateProjectSearchPlan({
+				intent: 'find_projects',
+				base_table: 'investment_opportunities',
+				joins: [],
+				filters: [],
+				sort: [
+					{
+						field: 'investment_opportunity_details.readiness_status',
+						direction: 'asc'
+					}
+				],
+				limit: 12,
+				select_strategy: 'project_cards',
+				explanation: 'Sorting by readiness.'
+			})
+		).toThrow(/join/i);
+	});
 });
