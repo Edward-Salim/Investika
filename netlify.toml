@@ -1,0 +1,9 @@
+[build]
+  command = "yarn run build"
+  publish = ".svelte-kit/netlify"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[plugins]]
+  package = "@netlify/plugin-sveltekit"
