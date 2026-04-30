@@ -73,10 +73,75 @@ export const investmentOpportunityDetails = pgTable('investment_opportunity_deta
 	lon: doublePrecision('lon')
 });
 
-export const investmentOpportunitiesRelations = relations(investmentOpportunities, ({ one }) => ({
+
+
+export const investmentOpportunityContacts = pgTable('investment_opportunity_contacts', {
+	id: bigint('id', { mode: 'bigint' }).primaryKey(),
+	id_peluang: integer('id_peluang').references(() => investmentOpportunities.id_peluang),
+	nama: text('nama'),
+	alamat: text('alamat'),
+	telepon: text('telepon'),
+	email: text('email'),
+	website: text('website')
+});
+
+export const investmentOpportunityGalleries = pgTable('investment_opportunity_galleries', {
+	id: bigint('id', { mode: 'bigint' }).primaryKey(),
+	id_peluang: integer('id_peluang').references(() => investmentOpportunities.id_peluang),
+	image_url: text('image_url')
+});
+
+export const investmentOpportunityIncentives = pgTable('investment_opportunity_incentives', {
+	id: bigint('id', { mode: 'bigint' }).primaryKey(),
+	id_peluang: integer('id_peluang').references(() => investmentOpportunities.id_peluang),
+	nama: text('nama'),
+	keterangan: text('keterangan')
+});
+
+export const investmentOpportunityInfos = pgTable('investment_opportunity_infos', {
+	id: bigint('id', { mode: 'bigint' }).primaryKey(),
+	id_peluang: integer('id_peluang').references(() => investmentOpportunities.id_peluang),
+	tipe: integer('tipe'),
+	nama: text('nama'),
+	url_rest: text('url_rest')
+});
+
+export const investmentOpportunitiesRelations = relations(investmentOpportunities, ({ one, many }) => ({
 	details: one(investmentOpportunityDetails, {
 		fields: [investmentOpportunities.id_peluang],
 		references: [investmentOpportunityDetails.id_peluang]
+	}),
+	contacts: many(investmentOpportunityContacts),
+	galleries: many(investmentOpportunityGalleries),
+	incentives: many(investmentOpportunityIncentives),
+	infos: many(investmentOpportunityInfos)
+}));
+
+export const investmentOpportunityContactsRelations = relations(investmentOpportunityContacts, ({ one }) => ({
+	opportunity: one(investmentOpportunities, {
+		fields: [investmentOpportunityContacts.id_peluang],
+		references: [investmentOpportunities.id_peluang]
+	})
+}));
+
+export const investmentOpportunityGalleriesRelations = relations(investmentOpportunityGalleries, ({ one }) => ({
+	opportunity: one(investmentOpportunities, {
+		fields: [investmentOpportunityGalleries.id_peluang],
+		references: [investmentOpportunities.id_peluang]
+	})
+}));
+
+export const investmentOpportunityIncentivesRelations = relations(investmentOpportunityIncentives, ({ one }) => ({
+	opportunity: one(investmentOpportunities, {
+		fields: [investmentOpportunityIncentives.id_peluang],
+		references: [investmentOpportunities.id_peluang]
+	})
+}));
+
+export const investmentOpportunityInfosRelations = relations(investmentOpportunityInfos, ({ one }) => ({
+	opportunity: one(investmentOpportunities, {
+		fields: [investmentOpportunityInfos.id_peluang],
+		references: [investmentOpportunities.id_peluang]
 	})
 }));
 
@@ -86,6 +151,7 @@ export const investmentOpportunityDetailsRelations = relations(investmentOpportu
 		references: [investmentOpportunities.id_peluang]
 	})
 }));
+
 
 export const regionalPopulation = pgTable('regional_population', {
 	id: bigint('id', { mode: 'bigint' }).primaryKey(),

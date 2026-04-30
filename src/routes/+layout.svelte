@@ -11,7 +11,7 @@
 
 	import './layout.css';
 	import { Gb, Id, Cn, Jp, Kr } from 'svelte-flag-icons';
-	import { Home, Menu, User, ChevronDown, BookOpen, Map, LogOut, ArrowRight, BrainCircuit } from 'lucide-svelte';
+	import { Home, Menu, User, ChevronDown, ChevronRight, BookOpen, Map, LogOut, ArrowRight, BrainCircuit, Plus } from 'lucide-svelte';
 	import { page } from '$app/state';
 	import { settingsStore } from '$lib/state/settings.svelte.js';
 	import { searchStore } from '$lib/state/search.svelte.js';
@@ -33,6 +33,7 @@
 	let isLangMenuOpen = $state(false);
 	let isProfileMenuOpen = $state(false);
 	let isAuthPage = $derived(page.url.pathname === '/login' || page.url.pathname === '/onboarding');
+	let pathSegments = $derived(page.url.pathname.split('/').filter(Boolean));
 </script>
 
 <svelte:head>
@@ -157,6 +158,24 @@
 					{/if}
 				</span>
 			</a>
+			<a
+				href="/submit"
+				title="Submit Project"
+				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
+					{page.url.pathname === '/submit' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+				class:justify-center={!isSidebarOpen}
+				class:px-0={!isSidebarOpen}
+			>
+				<Plus
+					size={18}
+					strokeWidth={2.5}
+					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
+						{page.url.pathname === '/submit' ? 'text-white' : 'text-white/70 group-hover:text-white'}"
+				/>
+				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
+					Submit Project
+				</span>
+			</a>
 		</nav>
 
 		<!-- Partnership Branding - Auto Carousel -->
@@ -194,14 +213,37 @@
 	<div class="flex flex-1 flex-col relative bg-white">
 		<!-- Topbar -->
 		<header class="flex h-16 items-center justify-between bg-white pl-8 pr-4 z-50 border-b border-slate-50 relative">
-			<div class="flex items-center space-x-4">
+			<div class="flex items-center">
 				<button
 					onclick={() => (isSidebarOpen = !isSidebarOpen)}
 					aria-label="Toggle sidebar"
-					class="group rounded-xl p-2 hover:bg-slate-50 text-slate-400 transition-colors"
+					class="group rounded-xl p-2 hover:bg-slate-50 text-slate-400 transition-colors mr-3"
 				>
 					<Menu size={20} strokeWidth={2.5} class="transition-transform group-hover:scale-110" />
 				</button>
+
+				<!-- Breadcrumbs -->
+				<div class="hidden md:flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+					<!-- Always show Dashboard first -->
+					<a href="/" class="hover:text-slate-600 transition-colors {pathSegments.length === 0 ? 'text-bkpm-blue' : ''}">Dashboard</a>
+					
+					{#if pathSegments.length > 0}
+						<ChevronRight size={12} class="mx-1.5 text-slate-300" strokeWidth={3} />
+					{/if}
+
+					{#each pathSegments as segment, i}
+						<span class={i === pathSegments.length - 1 ? 'text-bkpm-blue truncate max-w-[300px]' : 'text-slate-400'}>
+							{#if i === 1 && pathSegments[0].toLowerCase() === 'project' && page.data.project?.nama}
+								{page.data.project.nama}
+							{:else}
+								{segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')}
+							{/if}
+						</span>
+						{#if i < pathSegments.length - 1}
+							<ChevronRight size={12} class="mx-1.5 text-slate-300" strokeWidth={3} />
+						{/if}
+					{/each}
+				</div>
 			</div>
 
 			<div class="flex items-center space-x-4">

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
-	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, ChevronUp, LayoutGrid, Truck, Sprout, Cpu, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope, RotateCcw, Image } from 'lucide-svelte';
+	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, Search, ChevronUp, LayoutGrid, Truck, Sprout, Cpu, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope, RotateCcw, Image } from 'lucide-svelte';
 	import { fade, fly, slide } from 'svelte/transition';
 	import { cubicOut, cubicInOut } from 'svelte/easing';
 	import bkpmEmblem from '$lib/assets/logos/bkpm-emblem.png';
@@ -254,7 +254,6 @@
 	const hasAdvancedFilters = $derived(
 		selectedStatuses.length > 0 || 
 		selectedRegions.length > 0 || 
-		selectedESG.length > 0 || 
 		sortBy !== 'default' || 
 		minInvestment > 0 || 
 		maxInvestment < 100000 ||
@@ -345,7 +344,6 @@
 
 		// Sustainability/ESG
 		if (query.includes('sustainable') || query.includes('green') || query.includes('esg') || query.includes('impact') || query.includes('clean')) {
-			selectedESG = ['AAA'];
 			detectedFilters.push('AAA Sustainability Rating');
 		}
 
@@ -495,66 +493,80 @@
 		<!-- Compact header row -->
 		<div class="mb-6 max-w-[1400px] mx-auto">
 			<div class="flex items-center justify-between gap-3">
-				<!-- Sector Dropdown -->
-				<div class="relative flex-1">
-					<button
-						onclick={() => isSectorDropdownOpen = !isSectorDropdownOpen}
-						class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wide border border-slate-200 bg-white shadow-sm hover:border-bkpm-blue/40 transition-all cursor-pointer group"
-					>
-						<activeDef.icon size={16} strokeWidth={2.5} class="transition-colors
-							{activeDef.tier === 'Primer' ? 'text-emerald-500 group-hover:text-emerald-600' : 
-							 activeDef.tier === 'Sekunder' ? 'text-amber-500 group-hover:text-amber-600' : 
-							 activeDef.name === 'All' ? 'text-slate-400 group-hover:text-bkpm-blue' :
-							 'text-bkpm-blue group-hover:text-bkpm-blue'}" 
-						/>
-						<span class="text-slate-700 group-hover:text-slate-900">{activeDef.label}</span>
-						<ChevronDown size={14} class="ml-1 text-slate-400 transition-transform {isSectorDropdownOpen ? 'rotate-180' : ''}" />
-					</button>
-
-					{#if isSectorDropdownOpen}
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div class="fixed inset-0 z-10" onclick={() => isSectorDropdownOpen = false}></div>
-						<div 
-							class="absolute left-0 top-full mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-xl z-20 py-2 max-h-[50vh] overflow-y-auto"
-							transition:slide={{ duration: 200, easing: cubicOut }}
+				<!-- Sector & Search Group -->
+				<div class="flex items-center gap-2 flex-1">
+					<!-- Sector Dropdown -->
+					<div class="relative shrink-0">
+						<button
+							onclick={() => isSectorDropdownOpen = !isSectorDropdownOpen}
+							class="flex items-center h-11 gap-2.5 px-4 rounded-2xl text-xs font-black uppercase tracking-wide border border-slate-200 bg-white shadow-sm hover:border-bkpm-blue/40 transition-all cursor-pointer group"
 						>
-							<button 
-								onclick={() => { activeFilter = 'All'; isSectorDropdownOpen = false; }}
-								class="w-full text-left px-5 py-2.5 hover:bg-slate-50 flex items-center justify-between transition-colors {activeFilter === 'All' ? 'bg-slate-50' : ''}"
-							>
-								<div class="flex items-center gap-3">
-									<LayoutGrid size={16} class="text-slate-400" />
-									<span class="text-xs font-black uppercase text-slate-700 tracking-wide">{m.filter_all_sectors()}</span>
-								</div>
-								{#if activeFilter === 'All'}
-									<Check size={14} strokeWidth={3} class="text-slate-400" />
-								{/if}
-							</button>
+							<activeDef.icon size={16} strokeWidth={2.5} class="transition-colors
+								{activeDef.tier === 'Primer' ? 'text-emerald-500 group-hover:text-emerald-600' : 
+								 activeDef.tier === 'Sekunder' ? 'text-amber-500 group-hover:text-amber-600' : 
+								 activeDef.name === 'All' ? 'text-slate-400 group-hover:text-bkpm-blue' :
+								 'text-bkpm-blue group-hover:text-bkpm-blue'}" 
+							/>
+							<span class="text-slate-700 group-hover:text-slate-900">{activeDef.label}</span>
+							<ChevronDown size={14} class="ml-1 text-slate-400 transition-transform {isSectorDropdownOpen ? 'rotate-180' : ''}" />
+						</button>
 
-							{#each ['Primer', 'Sekunder', 'Tersier'] as tier}
-								<div class="px-5 py-2 mt-2 border-t border-slate-50">
-									<span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">
-										{tier === 'Primer' ? m.onb_cat_primer() : tier === 'Sekunder' ? m.onb_cat_sekunder() : m.onb_cat_tersier()}
-									</span>
-								</div>
-								{#each sectorFilters.filter(f => f.tier === tier) as f}
-									<button
-										onclick={() => { activeFilter = f.name; isSectorDropdownOpen = false; }}
-										class="w-full text-left px-5 py-2.5 hover:bg-slate-50 flex items-center justify-between transition-colors group cursor-pointer {activeFilter === f.name ? 'bg-slate-50' : ''}"
-									>
-										<div class="flex items-center gap-3">
-											<f.icon size={15} class="transition-transform group-hover:scale-110 {tier === 'Primer' ? 'text-emerald-500' : tier === 'Sekunder' ? 'text-amber-500' : 'text-bkpm-blue'}" />
-											<span class="text-xs font-bold {activeFilter === f.name ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}">{f.label}</span>
-										</div>
-										{#if activeFilter === f.name}
-											<Check size={14} strokeWidth={3} class={tier === 'Primer' ? 'text-emerald-500' : tier === 'Sekunder' ? 'text-amber-500' : 'text-bkpm-blue'} />
-										{/if}
-									</button>
+						{#if isSectorDropdownOpen}
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div class="fixed inset-0 z-10" onclick={() => isSectorDropdownOpen = false}></div>
+							<div 
+								class="absolute left-0 top-full mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-xl z-20 py-2 max-h-[50vh] overflow-y-auto"
+								transition:slide={{ duration: 200, easing: cubicOut }}
+							>
+								<button 
+									onclick={() => { activeFilter = 'All'; isSectorDropdownOpen = false; }}
+									class="w-full text-left px-5 py-2.5 hover:bg-slate-50 flex items-center justify-between transition-colors {activeFilter === 'All' ? 'bg-slate-50' : ''}"
+								>
+									<div class="flex items-center gap-3">
+										<LayoutGrid size={16} class="text-slate-400" />
+										<span class="text-xs font-black uppercase text-slate-700 tracking-wide">{m.filter_all_sectors()}</span>
+									</div>
+									{#if activeFilter === 'All'}
+										<Check size={14} strokeWidth={3} class="text-slate-400" />
+									{/if}
+								</button>
+
+								{#each ['Primer', 'Sekunder', 'Tersier'] as tier (tier)}
+									<div class="px-5 py-2 mt-2 border-t border-slate-50">
+										<span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+											{tier === 'Primer' ? m.onb_cat_primer() : tier === 'Sekunder' ? m.onb_cat_sekunder() : m.onb_cat_tersier()}
+										</span>
+									</div>
+									{#each sectorFilters.filter(f => f.tier === tier) as f (f.name)}
+										<button
+											onclick={() => { activeFilter = f.name; isSectorDropdownOpen = false; }}
+											class="w-full text-left px-5 py-2.5 hover:bg-slate-50 flex items-center justify-between transition-colors group cursor-pointer {activeFilter === f.name ? 'bg-slate-50' : ''}"
+										>
+											<div class="flex items-center gap-3">
+												<f.icon size={15} class="transition-transform group-hover:scale-110 {tier === 'Primer' ? 'text-emerald-500' : tier === 'Sekunder' ? 'text-amber-500' : 'text-bkpm-blue'}" />
+												<span class="text-xs font-bold {activeFilter === f.name ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}">{f.label}</span>
+											</div>
+											{#if activeFilter === f.name}
+												<Check size={14} strokeWidth={3} class={tier === 'Primer' ? 'text-emerald-500' : tier === 'Sekunder' ? 'text-amber-500' : 'text-bkpm-blue'} />
+											{/if}
+										</button>
+									{/each}
 								{/each}
-							{/each}
-						</div>
-					{/if}
+							</div>
+						{/if}
+					</div>
+
+					<!-- Simple Search Bar -->
+					<div class="relative w-full max-w-sm">
+						<Search size={14} class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+						<input 
+							type="text" 
+							bind:value={committedSearch}
+							placeholder="Search project..."
+							class="w-full h-11 pl-10 pr-4 rounded-2xl text-[11px] font-bold border border-slate-200 bg-white shadow-sm focus:outline-none focus:border-bkpm-blue/40 focus:ring-4 focus:ring-bkpm-blue/5 transition-all"
+						/>
+					</div>
 				</div>
 
 				<!-- Global Reset Button -->
@@ -564,7 +576,7 @@
 					<span class="text-xs font-bold text-slate-400">{m.filter_projects_count({ count: filteredProjects.length })}</span>
 					<button
 						onclick={() => isFilterOpen = !isFilterOpen}
-						class="relative flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-400 font-bold text-xs hover:border-bkpm-blue/40 hover:text-bkpm-blue transition-all cursor-pointer"
+						class="relative flex items-center h-11 gap-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-400 font-bold text-xs hover:border-bkpm-blue/40 hover:text-bkpm-blue transition-all cursor-pointer"
 					>
 						<SlidersHorizontal size={14} strokeWidth={2.5} />
 						{m.filter_advanced()}
@@ -577,7 +589,7 @@
 
 					<button 
 						onclick={clearAll}
-						class="p-2 rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-bkpm-blue hover:border-bkpm-blue/40 shadow-sm transition-all cursor-pointer group shrink-0"
+						class="flex items-center justify-center h-11 w-11 rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-bkpm-blue hover:border-bkpm-blue/40 shadow-sm transition-all cursor-pointer group shrink-0"
 						title={m.filter_reset()}
 					>
 						<RotateCcw size={14} strokeWidth={2.5} class="group-hover:rotate-[-45deg] transition-transform" />

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Bot, Briefcase, Zap, AlertTriangle, CheckCircle2, ChevronRight, TrendingUp, Anchor, Factory, MapPin } from 'lucide-svelte';
+	import { Bot, Briefcase, Zap, AlertTriangle, CheckCircle2, ChevronRight, TrendingUp, Anchor, Factory, MapPin, Building2, Construction, Sprout, Waves, Cpu, Palmtree, Stethoscope, Pickaxe, ShoppingBag, Layers, Truck } from 'lucide-svelte';
 	import { fade } from 'svelte/transition';
 	import { compareStore } from '$lib/state/compare.svelte';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
@@ -35,11 +35,33 @@
 			irr: p.nilai_irr_percent ? `${p.nilai_irr_percent}%` : p.nilai_irr || 'TBD',
 			npv: p.nilai_npv || 'TBD',
 			image: p.image_url || null,
+			isPsn: p.nama_psn ? true : false,
+			isKek: p.status_kek ? true : false,
+			agency: p.nama_pengelola || 'Ministry of Investment',
+			docStatus: p.status_doc || 'PPI',
 			investmentNum: p.nilai_investasi_amount ? parseFloat(p.nilai_investasi_amount) : parseInvest(p.nilai_investasi),
 			irrNum: p.nilai_irr_percent ? parseFloat(p.nilai_irr_percent) : parseIrr(p.nilai_irr),
 			npvNum: p.nilai_npv_amount ? parseFloat(p.nilai_npv_amount) : parseInvest(p.nilai_npv)
 		};
 	}));
+
+	const categoryIcons: Record<string, any> = {
+		'Energy': Zap,
+		'Construction': Construction,
+		'Infrastructure': Construction,
+		'Logistics': Truck,
+		'Agriculture': Sprout,
+		'Fisheries': Waves,
+		'Technology': Cpu,
+		'Manufacturing': Factory,
+		'Industri': Factory,
+		'Tourism': Palmtree,
+		'Healthcare': Stethoscope,
+		'Mining': Pickaxe,
+		'Property': Building2,
+		'Retail': ShoppingBag,
+		'Services': Briefcase
+	};
 
 	let isAnalyzing = $state(true);
 	
@@ -62,16 +84,7 @@
 	<div class="bg-white px-8 py-10 border-b border-slate-200">
 		<div class="max-w-5xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
 			<div>
-				<div class="flex items-center gap-3 mb-4">
-					<div class="px-2.5 py-1 bg-slate-50 rounded text-slate-500 border border-slate-200 flex items-center gap-2">
-						<Bot size={12} class="text-slate-400" />
-						<span class="text-[9px] font-black uppercase tracking-widest">VestiAI</span>
-					</div>
-					<div class="px-2.5 py-1 bg-slate-50 rounded border border-slate-200 flex items-center gap-1.5 text-slate-500">
-						<Briefcase size={12} />
-						<span class="text-[9px] font-bold uppercase tracking-widest">{favorites.length} Saved Projects</span>
-					</div>
-				</div>
+
 				<h1 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-none">Portfolio Synthesis</h1>
 				<p class="text-xs text-slate-500 mt-3 max-w-xl leading-relaxed">
 					AI-driven comparative analysis evaluating financial viability, regional risk profiles, and execution timelines across your short-listed opportunities.
@@ -110,105 +123,161 @@
 				</div>
 			{/if}
 
-			<div class="grid grid-cols-1 lg:grid-cols-12">
-				<!-- Left: AI Synthesis Text -->
-				<div class="lg:col-span-5 p-8 border-r border-slate-100 bg-slate-50/50">
+			<div class="grid grid-cols-1">
+				<!-- Top: AI Synthesis Text (Full Width) -->
+				<div class="p-8 border-b border-slate-100 bg-slate-50/50">
 					<div class="flex items-center gap-3 mb-6">
-						<div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 border border-slate-200">
+						<div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 border border-slate-200 shadow-sm">
 							<Bot size={16} strokeWidth={2.5} />
 						</div>
-						<h2 class="text-base font-black text-slate-900 tracking-tight">Executive Summary</h2>
+						<h2 class="text-base font-black text-slate-900 tracking-tight">VestiAI Synthesis & Strategy</h2>
 					</div>
 					
-					<div class="space-y-4 text-xs text-slate-600 leading-relaxed font-medium">
-						<p>
-							Based on multidimensional analysis of your selected portfolio, <strong class="text-slate-900">Kawasan Industri Terpadu Batang</strong> emerges as the most balanced asset for core institutional allocation, driven by immediate off-taker demand and heavy state-backed infrastructure support.
-						</p>
-						<p>
-							<strong class="text-slate-900">Pelabuhan Patimban</strong> offers the highest certainty of execution (Low Risk) due to G2G financing structures, though IRR is capped at 11.2%.
-						</p>
-						<p>
-							For yield enhancement, <strong class="text-slate-900">KEK Mandalika</strong> presents a high-alpha opportunity (18.4% ROI) but carries distinct operational and regional absorption risks.
-						</p>
-					</div>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+						<div class="space-y-4 text-xs text-slate-600 leading-relaxed font-medium">
+							<p>
+								Based on multidimensional analysis, <strong class="text-slate-900">Kawasan Industri Terpadu Batang</strong> emerges as the most balanced asset for core institutional allocation, driven by immediate off-taker demand.
+							</p>
+							<p>
+								<strong class="text-slate-900">Pelabuhan Patimban</strong> offers the highest certainty of execution (Low Risk) due to G2G financing structures.
+							</p>
+						</div>
 
-					<div class="mt-8 pt-6 border-t border-slate-200">
-						<div class="flex items-start gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-							<CheckCircle2 size={16} class="text-slate-400 shrink-0 mt-0.5" />
-							<div>
-								<h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1.5">Recommendation</h4>
-								<p class="text-[11px] text-slate-600 leading-snug">Structure a blended 70/30 barbell strategy weighting Batang (Core) and Mandalika (Satellite) for optimal risk-adjusted returns.</p>
+						<div class="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+							<div class="flex items-start gap-3">
+								<CheckCircle2 size={16} class="text-slate-400 shrink-0 mt-0.5" />
+								<div>
+									<h4 class="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-1.5">Alpha Recommendation</h4>
+									<p class="text-[11px] text-slate-600 leading-snug">Structure a blended 70/30 barbell strategy weighting Batang (Core) and Mandalika (Satellite) for optimal risk-adjusted returns.</p>
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<!-- Right: Comparative Matrix -->
-				<div class="lg:col-span-7 p-8 bg-white">
-					<h3 class="text-[10px] font-black text-slate-900 mb-6 uppercase tracking-widest flex items-center gap-2">
-						<AlertTriangle size={14} class="text-slate-400" />
-						Risk & Return Matrix
-					</h3>
+				<!-- Bottom: Comparative Matrix (Full Width) -->
+				<div class="p-8 bg-white">
+					<div class="flex items-center justify-between mb-8">
+						<h3 class="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+							<AlertTriangle size={14} class="text-slate-400" />
+							Structural Attribute Comparison
+						</h3>
+						
+						<button class="px-5 py-2 bg-slate-900 text-white rounded-lg text-[10px] font-bold hover:bg-slate-800 transition-colors shadow-sm">
+							Request Due Diligence
+						</button>
+					</div>
 					
-					<div class="overflow-x-auto custom-scrollbar">
-						<table class="w-full text-left border-collapse min-w-[400px]">
+					<div class="overflow-x-auto custom-scrollbar -mx-8 px-8">
+						<table class="w-full text-left border-collapse min-w-[800px] table-fixed">
 							<thead>
 								<tr class="border-b border-slate-200">
-									<th class="pb-3 pr-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Metric</th>
+									<th class="pb-5 pr-6 text-[9px] font-black text-slate-400 uppercase tracking-widest w-[180px]">Project Attributes</th>
 									{#each favorites as fav}
-										<th class="pb-3 px-3 text-[10px] font-black text-slate-900 w-1/4 leading-snug">{fav.title}</th>
+										<th class="pb-5 px-6 text-[12px] font-black text-slate-900 leading-tight">
+											<div class="truncate" title={fav.title}>{fav.title}</div>
+										</th>
 									{/each}
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-slate-100 text-xs">
-								<!-- Risk Profile -->
-								<tr class="hover:bg-slate-50/50 transition-colors">
-									<td class="py-3.5 pr-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Risk Profile</td>
-									<td class="py-3.5 px-3">
-										<span class="text-[10px] font-black text-slate-600">MEDIUM</span>
-									</td>
-									<td class="py-3.5 px-3">
-										<span class="text-[10px] font-black text-slate-600">LOW</span>
-									</td>
-									<td class="py-3.5 px-3">
-										<span class="text-[10px] font-black text-slate-600">HIGH</span>
-									</td>
+								<!-- Location -->
+								<tr class="hover:bg-slate-50/20 transition-colors">
+									<td class="py-5 pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Geography</td>
+									{#each favorites as fav}
+										<td class="py-5 px-6 font-medium text-slate-600 text-[12px]">{fav.location}</td>
+									{/each}
 								</tr>
-								<!-- Execution Timeline -->
-								<tr class="hover:bg-slate-50/50 transition-colors">
-									<td class="py-3.5 pr-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Timeline</td>
-									<td class="py-3.5 px-3 font-medium text-slate-700 text-[11px]">24 Months</td>
-									<td class="py-3.5 px-3 font-medium text-slate-700 text-[11px]">36 Months</td>
-									<td class="py-3.5 px-3 font-medium text-slate-700 text-[11px]">18 Months</td>
+								<!-- Sector -->
+								<tr class="hover:bg-slate-50/20 transition-colors">
+									<td class="py-5 pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Investment Sector</td>
+									{#each favorites as fav}
+										<td class="py-5 px-6">
+											<div class="inline-flex items-center gap-2 px-2.5 py-1.5 bg-slate-100 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-wider">
+												{#if categoryIcons[fav.category]}
+													{@const Icon = categoryIcons[fav.category]}
+													<Icon size={12} class="text-slate-400" />
+												{/if}
+												{fav.category}
+											</div>
+										</td>
+									{/each}
 								</tr>
-								<!-- Govt Support -->
-								<tr class="hover:bg-slate-50/50 transition-colors">
-									<td class="py-3.5 pr-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest">PSN Status</td>
-									<td class="py-3.5 px-3">
-										<CheckCircle2 size={14} class="text-slate-400" />
-									</td>
-									<td class="py-3.5 px-3">
-										<CheckCircle2 size={14} class="text-slate-400" />
-									</td>
-									<td class="py-3.5 px-3">
-										<CheckCircle2 size={14} class="text-slate-400" />
-									</td>
+								<!-- Capex -->
+								<tr class="hover:bg-slate-50/20 transition-colors">
+									<td class="py-5 pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Total CAPEX</td>
+									{#each favorites as fav}
+										<td class="py-5 px-6 font-black text-slate-900 text-[15px] tracking-tight">{fav.capex}</td>
+									{/each}
 								</tr>
-								<!-- Primary Driver -->
-								<tr class="hover:bg-slate-50/50 transition-colors">
-									<td class="py-3.5 pr-4 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Growth Driver</td>
-									<td class="py-3.5 px-3 text-[10px] font-medium text-slate-600 leading-snug">EV Supply Chain</td>
-									<td class="py-3.5 px-3 text-[10px] font-medium text-slate-600 leading-snug">Export Logistics</td>
-									<td class="py-3.5 px-3 text-[10px] font-medium text-slate-600 leading-snug">Tourism</td>
+								<!-- IRR -->
+								<tr class="hover:bg-slate-50/20 transition-colors">
+									<td class="py-5 pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Estimated IRR</td>
+									{#each favorites as fav}
+										<td class="py-5 px-6 font-black text-logo-green text-[15px] tracking-tight">{fav.irr}</td>
+									{/each}
+								</tr>
+								<!-- Status -->
+								<tr class="hover:bg-slate-50/20 transition-colors">
+									<td class="py-5 pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Readiness Level</td>
+									{#each favorites as fav}
+										<td class="py-5 px-6">
+											<div class="flex items-center gap-2">
+												<div class="h-2 w-2 rounded-full bg-logo-green shadow-[0_0_8px_rgba(74,222,128,0.5)]"></div>
+												<span class="text-[11px] font-black text-slate-700 uppercase tracking-widest">{fav.status}</span>
+											</div>
+										</td>
+									{/each}
+								</tr>
+								<!-- Governance / Strategic -->
+								<tr class="hover:bg-slate-50/20 transition-colors">
+									<td class="py-5 pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Strategic Status</td>
+									{#each favorites as fav}
+										<td class="py-5 px-6">
+											<div class="flex flex-col gap-1.5">
+												{#if fav.isPsn}
+													<span class="text-[9px] font-black text-bkpm-blue uppercase tracking-tighter bg-bkpm-blue/5 px-1.5 py-0.5 rounded border border-bkpm-blue/10 self-start">Strategic National Project</span>
+												{/if}
+												{#if fav.isKek}
+													<span class="text-[9px] font-black text-logo-green uppercase tracking-tighter bg-logo-green/5 px-1.5 py-0.5 rounded border border-logo-green/10 self-start">Verified Special Zone</span>
+												{/if}
+												{#if !fav.isPsn && !fav.isKek}
+													<span class="text-[11px] text-slate-400 font-medium italic">Standard Governance</span>
+												{/if}
+											</div>
+										</td>
+									{/each}
+								</tr>
+								<!-- Agency -->
+								<tr class="hover:bg-slate-50/20 transition-colors">
+									<td class="py-5 pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Managing Agency</td>
+									{#each favorites as fav}
+										<td class="py-5 px-6 font-medium text-slate-700 text-[11px] leading-tight">{fav.agency}</td>
+									{/each}
+								</tr>
+								<!-- Doc Status -->
+								<tr class="hover:bg-slate-50/20 transition-colors">
+									<td class="py-5 pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">Doc Readiness</td>
+									{#each favorites as fav}
+										<td class="py-5 px-6 font-black text-slate-900 text-[11px]">{fav.docStatus}</td>
+									{/each}
+								</tr>
+								<!-- Risk Score -->
+								<tr class="hover:bg-slate-50/20 transition-colors">
+									<td class="py-5 pr-6 font-bold text-slate-500 text-[10px] uppercase tracking-widest">AI Risk Profiling</td>
+									{#each favorites as fav, i}
+										<td class="py-5 px-6">
+											<div class="flex items-center gap-1.5">
+												<TrendingUp size={14} class={i === 1 ? 'text-logo-green' : 'text-slate-400'} />
+												<span class="text-[11px] font-black {i === 1 ? 'text-logo-green' : 'text-slate-600'} uppercase tracking-widest">
+													{i === 1 ? 'LOW RISK' : 'MEDIUM RISK'}
+												</span>
+											</div>
+										</td>
+									{/each}
 								</tr>
 							</tbody>
 						</table>
-					</div>
-
-					<div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
-						<button class="px-6 py-2 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-800 transition-colors shadow-sm">
-							Request Due Diligence
-						</button>
 					</div>
 				</div>
 			</div>
