@@ -33,8 +33,18 @@ Use this output contract exactly:
   "explanation": "Short user-facing summary"
 }
 
+Join rules:
+- The joins array must contain objects with exactly two keys: "from" and "to".
+- Never use "table", "on", "left", "right", "sql", or any custom join condition keys.
+- Never write SQL join expressions or equality clauses.
+- Valid join example:
+  { "from": "investment_opportunities", "to": "adm_provinces" }
+- Invalid join example:
+  { "table": "adm_provinces", "on": "investment_opportunities.id_adm_provinsi = adm_provinces.id_adm_provinsi" }
+
 Use "field" as the key name for filters and sort entries. Never use "column".
 Every filter.field and sort.field must use one of the exact fully-qualified column names from the approved schema summary.
+If a filter.field or sort.field refers to a joined table, include the required join in joins.
 Example filter entry:
 { "field": "investment_opportunities.nama_provinsi", "operator": "ilike", "value": "Bali" }
 Example sort entry:
