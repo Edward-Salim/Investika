@@ -1,52 +1,31 @@
 import { db } from '$lib/server/db';
-import { admProvinces } from '$lib/server/db/schema';
 import { mapProjectToCard } from '$lib/projects/project-card';
 import type { PageServerLoad } from './$types';
-import { enrichProjectWithMockData, getMockProjects } from '$lib/server/mock';
+import { getMockProjects } from '$lib/server/mock';
+import { getHomeProjectsPage, getHomeProjectsTotal, HOME_PROJECTS_PAGE_SIZE } from '$lib/server/home-projects';
 
 export const load: PageServerLoad = async () => {
 	try {
 		if (!db) {
-			return { projects: getMockProjects().map(mapProjectToCard) };
+			const projects = getMockProjects(HOME_PROJECTS_PAGE_SIZE).map(mapProjectToCard);
+			return { projects, totalProjects: projects.length };
 		}
 
-		// Run both queries in parallel for speed
-		const [provResult, projResult] = await Promise.allSettled([
-			db.select({
-				id_adm_provinsi: admProvinces.id_adm_provinsi,
-				wilayah_group: admProvinces.wilayah_group
-			}).from(admProvinces),
-			db.query.investmentOpportunities.findMany({
-				limit: 100,
-				with: {
-					details: true
-				}
-			})
+		const [projects, totalProjects] = await Promise.all([
+			getHomeProjectsPage(db, 0, HOME_PROJECTS_PAGE_SIZE),
+			getHomeProjectsTotal(db)
 		]);
 
-		const provinces = provResult.status === 'fulfilled' ? provResult.value : [];
-		let projects = projResult.status === 'fulfilled' ? projResult.value : getMockProjects();
-
-		if (projects.length === 0) {
-			projects = getMockProjects();
-		}
-
-		const wilayahMap = Object.fromEntries(
-			provinces.map((p) => [p.id_adm_provinsi, p.wilayah_group])
-		);
-
 		return {
-			projects: projects
-				.map((project: any) => ({
-					...enrichProjectWithMockData(project),
-					wilayah_group: wilayahMap[project.id_adm_provinsi] || null
-				}))
-				.map(mapProjectToCard)
+			projects,
+			totalProjects
 		};
 	} catch (error: any) {
 		console.error('Main load error:', error);
+		const projects = getMockProjects(HOME_PROJECTS_PAGE_SIZE).map(mapProjectToCard);
 		return {
-			projects: getMockProjects().map(mapProjectToCard)
+			projects,
+			totalProjects: projects.length
 		};
 	}
 };

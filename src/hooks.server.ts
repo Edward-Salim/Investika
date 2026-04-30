@@ -24,16 +24,6 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
-	const session = await auth.api.getSession({ headers: event.request.headers });
-	const isProtoAuth = event.cookies.get('proto_auth') === 'true';
-
-	if (session) {
-		event.locals.session = session.session;
-		event.locals.user = session.user;
-	}
-
-	const hasAccess = !!session || isProtoAuth;
-
 	// Protected routes logic
 	const pathname = event.url.pathname;
 	const isPublicPath = pathname === '/' ||
@@ -45,6 +35,24 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 						 pathname.includes('/api/auth') || 
 						 pathname.includes('.') || // Static files
 						 pathname.startsWith('/_app');
+
+	const isProtoAuth = event.cookies.get('proto_auth') === 'true';
+	const cookieHeader = event.request.headers.get('cookie') ?? '';
+	const mayHaveAuthSession =
+		isProtoAuth ||
+		cookieHeader.includes('better-auth') ||
+		cookieHeader.includes('session_token');
+
+	let session = null;
+	if (!isPublicPath || mayHaveAuthSession) {
+		session = await auth.api.getSession({ headers: event.request.headers });
+		if (session) {
+			event.locals.session = session.session;
+			event.locals.user = session.user;
+		}
+	}
+
+	const hasAccess = !!session || isProtoAuth;
 
 	if (!hasAccess && !isPublicPath) {
 		throw redirect(302, '/login');

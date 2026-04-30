@@ -11,7 +11,7 @@
 
 	import './layout.css';
 	import { Gb, Id, Cn, Jp, Kr } from 'svelte-flag-icons';
-	import { Home, Menu, User, ChevronDown, ChevronRight, BookOpen, Map, LogOut, ArrowRight, BrainCircuit, Plus, BookText } from 'lucide-svelte';
+	import { Home, Menu, User, ChevronDown, ChevronRight, BookOpen, Map, LogOut, ArrowRight, BrainCircuit, Plus, BookText, Pickaxe, Factory } from 'lucide-svelte';
 	import { page } from '$app/state';
 	import { settingsStore } from '$lib/state/settings.svelte.js';
 	import { resetSearchStore, searchStore } from '$lib/state/search.svelte.js';
@@ -44,6 +44,12 @@
 		/^\/(id|zh|ja|ko)?\/?project\/[^/]+$/.test(page.url.pathname) ||
 		/^\/project\/[^/]+$/.test(page.url.pathname)
 	);
+
+	let isRegionsPage = $derived(page.url.pathname.endsWith('/regions') || page.url.pathname === '/regions');
+	let isComparePage = $derived(page.url.pathname.endsWith('/compare') || page.url.pathname === '/compare');
+	let isPoliciesPage = $derived(page.url.pathname.endsWith('/policies') || page.url.pathname === '/policies');
+	let isWikiPage = $derived(page.url.pathname.endsWith('/wiki') || page.url.pathname === '/wiki');
+	let isSubmitPage = $derived(page.url.pathname.endsWith('/submit') || page.url.pathname === '/submit');
 
 	let displaySegments = $derived(pathSegments.filter(s => !['en', 'id', 'zh', 'ja', 'ko'].includes(s.toLowerCase())));
 </script>
@@ -114,7 +120,7 @@
 				href="/regions"
 				title={m.nav_regions_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
-					{page.url.pathname === '/regions' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+					{isRegionsPage ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
 				class:px-0={!isSidebarOpen}
 			>
@@ -122,7 +128,7 @@
 					size={18}
 					strokeWidth={2.5}
 					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
-						{page.url.pathname === '/regions' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
+						{isRegionsPage ? 'text-white' : 'text-white/50 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					{m.nav_regions()}
@@ -134,7 +140,7 @@
 				href="/compare"
 				title={m.nav_compare_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
-					{page.url.pathname === '/compare' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+					{isComparePage ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
 				class:px-0={!isSidebarOpen}
 			>
@@ -142,16 +148,52 @@
 					<BrainCircuit
 						size={18}
 						strokeWidth={2.5}
-						class="transition-colors {page.url.pathname === '/compare' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
+						class="transition-colors {isComparePage ? 'text-white' : 'text-white/50 group-hover:text-white'}"
 					/>
 				</div>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					{m.nav_compare()}
 					{#if compareStore.projects.length > 0}
-						<span class="ml-1.5 inline-flex items-center justify-center h-4 px-1.5 rounded-full font-black {page.url.pathname === '/compare' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white'} text-[8px]">{compareStore.projects.length}/3</span>
+						<span class="ml-1.5 inline-flex items-center justify-center h-4 px-1.5 rounded-full font-black {isComparePage ? 'bg-white/20 text-white' : 'bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white'} text-[8px]">{compareStore.projects.length}/3</span>
 					{/if}
 				</span>
 			</a>
+
+			<div class="py-1 px-4 opacity-10"><div class="h-px bg-white/50"></div></div>
+
+			<!-- 2.1 Commodities (Coming Soon) -->
+			<div
+				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap opacity-30 cursor-not-allowed select-none"
+				class:justify-center={!isSidebarOpen}
+				class:px-0={!isSidebarOpen}
+			>
+				<Pickaxe
+					size={18}
+					strokeWidth={2.5}
+					class="shrink-0 text-white/50 {!isSidebarOpen ? '' : 'mr-3'}"
+				/>
+				<span class="transition-opacity duration-300 flex items-center gap-2" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
+					{m.nav_commodities()}
+					<span class="text-[7px] bg-white/20 text-white px-1 py-0.5 rounded font-black uppercase tracking-tighter">Soon</span>
+				</span>
+			</div>
+
+			<!-- 2.2 Downstreaming (Coming Soon) -->
+			<div
+				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap opacity-30 cursor-not-allowed select-none"
+				class:justify-center={!isSidebarOpen}
+				class:px-0={!isSidebarOpen}
+			>
+				<Factory
+					size={18}
+					strokeWidth={2.5}
+					class="shrink-0 text-white/50 {!isSidebarOpen ? '' : 'mr-3'}"
+				/>
+				<span class="transition-opacity duration-300 flex items-center gap-2" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
+					{m.nav_downstreaming()}
+					<span class="text-[7px] bg-white/20 text-white px-1 py-0.5 rounded font-black uppercase tracking-tighter">Soon</span>
+				</span>
+			</div>
 
 			<div class="py-2 opacity-10"><div class="h-px bg-white"></div></div>
 
@@ -160,7 +202,7 @@
 				href="/policies"
 				title={m.nav_policies_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
-					{page.url.pathname === '/policies' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+					{isPoliciesPage ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
 				class:px-0={!isSidebarOpen}
 			>
@@ -168,7 +210,7 @@
 					size={18}
 					strokeWidth={2.5}
 					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
-						{page.url.pathname === '/policies' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
+						{isPoliciesPage ? 'text-white' : 'text-white/50 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					{m.nav_policies()}
@@ -180,7 +222,7 @@
 				href="/wiki"
 				title={m.nav_wiki_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
-					{page.url.pathname === '/wiki' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+					{isWikiPage ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
 				class:px-0={!isSidebarOpen}
 			>
@@ -188,7 +230,7 @@
 					size={18}
 					strokeWidth={2.5}
 					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
-						{page.url.pathname === '/wiki' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
+						{isWikiPage ? 'text-white' : 'text-white/50 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					{m.nav_wiki()}
@@ -200,7 +242,7 @@
 				href="/submit"
 				title={m.nav_submit_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
-					{page.url.pathname === '/submit' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+					{isSubmitPage ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
 				class:px-0={!isSidebarOpen}
 			>
@@ -208,7 +250,7 @@
 					size={18}
 					strokeWidth={2.5}
 					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
-						{page.url.pathname === '/submit' ? 'text-white' : 'text-white/70 group-hover:text-white'}"
+						{isSubmitPage ? 'text-white' : 'text-white/70 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					{m.nav_submit()}
@@ -263,31 +305,56 @@
 				<!-- Breadcrumbs -->
 				<div class="hidden md:flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
 					<!-- Always show Dashboard first -->
-					<a href="/" class="hover:text-bkpm-blue transition-colors underline decoration-bkpm-blue/30 underline-offset-4 {pathSegments.length === 0 || (pathSegments.length === 1 && ['en','id','zh','ja','ko'].includes(pathSegments[0])) ? 'text-bkpm-blue' : 'text-slate-400'}">
+					<a href="/?view=catalog" class="hover:text-bkpm-blue transition-colors underline decoration-bkpm-blue/30 underline-offset-4 {pathSegments.length === 0 || (pathSegments.length === 1 && ['en','id','zh','ja','ko'].includes(pathSegments[0])) ? 'text-bkpm-blue' : 'text-slate-400'}">
 						{m.nav_dashboard()}
 					</a>
 					
 					{#each displaySegments as segment, i}
 						<ChevronRight size={12} class="mx-1.5 text-slate-300" strokeWidth={3} />
-						<span class={i === displaySegments.length - 1 ? 'text-bkpm-blue truncate max-w-[300px]' : 'text-slate-400'}>
-							{#if segment === 'regions'}
-								{m.nav_regions()}
-							{:else if segment === 'compare'}
-								{m.nav_compare()}
-							{:else if segment === 'policies'}
-								{m.nav_policies()}
-							{:else if segment === 'wiki'}
-								{m.nav_wiki()}
-							{:else if segment === 'submit'}
-								{m.nav_submit()}
-							{:else if segment === 'project' && i === displaySegments.length - 2 && page.data.project?.nama}
-								{m.nav_projects()}
-							{:else if i === displaySegments.length - 1 && displaySegments[i-1] === 'project' && page.data.project?.nama}
-								{page.data.project.nama}
-							{:else}
-								{segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')}
-							{/if}
-						</span>
+						
+						{@const isLast = i === displaySegments.length - 1}
+						{@const segmentHref = segment === 'project' ? '/?view=catalog' : `/${displaySegments.slice(0, i + 1).join('/')}`}
+						
+						{#if isLast}
+							<span class="text-bkpm-blue truncate max-w-[300px]">
+								{#if i === displaySegments.length - 1 && displaySegments[i-1] === 'project' && page.data.project?.nama}
+									{page.data.project.nama}
+								{:else if segment === 'regions'}
+									{m.nav_regions()}
+								{:else if segment === 'compare'}
+									{m.nav_compare()}
+								{:else if segment === 'policies'}
+									{m.nav_policies()}
+								{:else if segment === 'wiki'}
+									{m.nav_wiki()}
+								{:else if segment === 'submit'}
+									{m.nav_submit()}
+								{:else}
+									{segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')}
+								{/if}
+							</span>
+						{:else}
+							<a 
+								href={segmentHref} 
+								class="text-slate-400 hover:text-bkpm-blue transition-colors underline decoration-bkpm-blue/0 hover:decoration-bkpm-blue/30 underline-offset-4"
+							>
+								{#if segment === 'regions'}
+									{m.nav_regions()}
+								{:else if segment === 'compare'}
+									{m.nav_compare()}
+								{:else if segment === 'policies'}
+									{m.nav_policies()}
+								{:else if segment === 'wiki'}
+									{m.nav_wiki()}
+								{:else if segment === 'submit'}
+									{m.nav_submit()}
+								{:else if segment === 'project'}
+									{m.nav_projects()}
+								{:else}
+									{segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')}
+								{/if}
+							</a>
+						{/if}
 					{/each}
 				</div>
 			</div>

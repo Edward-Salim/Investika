@@ -1,12 +1,10 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
 	import { Map, ChevronLeft, ChevronRight, BarChart2, Briefcase, Users, DollarSign, Activity, Factory, MapPin, Search, AlertCircle, Bot, ExternalLink, Loader2 } from 'lucide-svelte';
-	import { page } from '$app/state';
 	import { browser } from '$app/environment';
-	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { fly, fade } from 'svelte/transition';
 	import type { PageData } from './$types';
-	import { compareStore } from '$lib/state/compare.svelte';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
 	import vestiAINews from '$lib/assets/logos/vestiAI-news.png';
 	import DataTable from '$lib/components/DataTable.svelte';
@@ -21,29 +19,131 @@
 		return (m as any)[key] ? (m as any)[key]() : fallback;
 	}
 
-	let selectedId = $state<number | undefined>(undefined);
+	const serverSelectedRegion = $derived(data.selectedRegion ?? null);
+	let selectedId = $state<number | undefined>(
+		data.selectedRegion?.id_adm_provinsi ?? data.provinces?.[0]?.id_adm_provinsi
+	);
+	let selectedRegion = $state<any>(null);
+	let isRegionLoading = $state(false);
+	let regionDetailAbortController: AbortController | null = null;
+	const regionDetailCache = new globalThis.Map<number, any>();
+	let infraSection = $state<HTMLDivElement | null>(null);
+	let shouldRenderInfraMap = $state(false);
+	let infraSectionObserver: IntersectionObserver | null = null;
 
 	$effect(() => {
-		const urlId = page.url.searchParams.get('id');
-		const newSelectedId = urlId ? parseInt(urlId) : data.provinces?.[0]?.id_adm_provinsi;
-		if (newSelectedId && selectedId !== newSelectedId) {
-			selectedId = newSelectedId;
+		if (!selectedRegion && serverSelectedRegion) {
+			selectedRegion = serverSelectedRegion;
 		}
 	});
 
-	const selectRegion = (id: number) => {
-		selectedId = id;
-		const newUrl = new URL(page.url);
-		newUrl.searchParams.set('id', id.toString());
-		goto(newUrl.toString(), { replaceState: true, noScroll: true, keepFocus: true });
-	};
+	async function selectRegion(id: number) {
+		if (
+			selectedId === id &&
+			selectedRegion?.id_adm_provinsi === id &&
+			selectedRegion?.projects?.length
+		) return;
 
-	let selectedRegion = $derived(
-		data.provinces?.find((p: any) => p.id_adm_provinsi == selectedId) ?? data.provinces?.[0]
-	);
+		selectedId = id;
+		if (browser) {
+			const newUrl = new URL(window.location.href);
+			newUrl.searchParams.set('id', id.toString());
+			window.history.replaceState(window.history.state, '', newUrl);
+		}
+
+		const cachedRegion = regionDetailCache.get(id);
+		if (cachedRegion?.projects?.length || cachedRegion?.offices?.length || cachedRegion?.infrastructure?.length || cachedRegion?.sectorInvestment?.length) {
+			selectedRegion = cachedRegion;
+			isRegionLoading = false;
+			return;
+		}
+
+		regionDetailAbortController?.abort();
+		regionDetailAbortController = new AbortController();
+		isRegionLoading = true;
+
+		try {
+			const response = await fetch(`/api/region-detail?id=${id}`, {
+				signal: regionDetailAbortController.signal
+			});
+			const payload = await response.json().catch(() => null);
+			if (!response.ok || !payload?.region) {
+				throw new Error(payload?.error || 'Failed to load region detail');
+			}
+
+			regionDetailCache.set(id, payload.region);
+			selectedRegion = payload.region;
+		} catch (error: any) {
+			if (error?.name !== 'AbortError') {
+				console.error('Failed to switch region:', error);
+			}
+		} finally {
+			if (regionDetailAbortController?.signal.aborted) return;
+			isRegionLoading = false;
+		}
+	}
+
+	onMount(() => {
+		if (
+			serverSelectedRegion?.id_adm_provinsi &&
+			(serverSelectedRegion.projects?.length ||
+				serverSelectedRegion.offices?.length ||
+				serverSelectedRegion.infrastructure?.length ||
+				serverSelectedRegion.sectorInvestment?.length)
+		) {
+			regionDetailCache.set(serverSelectedRegion.id_adm_provinsi, serverSelectedRegion);
+		}
+
+		if (selectedId && (!selectedRegion?.projects || selectedRegion.projects.length === 0)) {
+			void selectRegion(selectedId);
+		}
+
+		if (!browser || typeof IntersectionObserver === 'undefined') {
+			shouldRenderInfraMap = true;
+			return () => {
+				regionDetailAbortController?.abort();
+			};
+		}
+
+		infraSectionObserver = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) {
+					shouldRenderInfraMap = true;
+					infraSectionObserver?.disconnect();
+					infraSectionObserver = null;
+				}
+			},
+			{ rootMargin: '320px 0px' }
+		);
+
+		return () => {
+			infraSectionObserver?.disconnect();
+			regionDetailAbortController?.abort();
+		};
+	});
+
+	$effect(() => {
+		if (!browser || shouldRenderInfraMap || !infraSectionObserver || !infraSection) return;
+		infraSectionObserver.observe(infraSection);
+		return () => {
+			if (infraSection) {
+				infraSectionObserver?.unobserve(infraSection);
+			}
+		};
+	});
+
+	type RegionNewsItem = {
+		title: string;
+		link: string;
+		source: string;
+		sourceUrl: string;
+		sourceIcon: string;
+		date: string;
+	};
+	const regionNewsCache: globalThis.Map<string, RegionNewsItem[]> = new globalThis.Map();
 	let searchQuery = $state('');
 	let selectedWilayah = $state<string | null>(null);
-	let newsItems = $state<Array<{ title: string; link: string; source: string; sourceUrl: string; sourceIcon: string; date: string }>>([]);
+	let newsItems = $state<RegionNewsItem[]>([]);
 	let isNewsLoading = $state(false);
 	let projectRail = $state<HTMLDivElement | null>(null);
 
@@ -91,17 +191,26 @@
 	$effect(() => {
 		if (!browser || !selectedRegion?.nama) return;
 
+		const regionName = selectedRegion.nama;
+		if (regionNewsCache.has(regionName)) {
+			newsItems = regionNewsCache.get(regionName) ?? [];
+			isNewsLoading = false;
+			return;
+		}
+
 		let cancelled = false;
 		isNewsLoading = true;
 
-		fetch(`/api/region-news?region=${encodeURIComponent(selectedRegion.nama)}`)
+		fetch(`/api/region-news?region=${encodeURIComponent(regionName)}`)
 			.then(async (response) => {
 				if (!response.ok) throw new Error('Failed to fetch region news');
 				return response.json();
 			})
 			.then((payload) => {
 				if (!cancelled) {
-					newsItems = Array.isArray(payload.items) ? payload.items : [];
+					const items = Array.isArray(payload.items) ? payload.items : [];
+					regionNewsCache.set(regionName, items);
+					newsItems = items;
 				}
 			})
 			.catch(() => {
@@ -206,20 +315,6 @@
 			</div>
 		</div>
 
-		<!-- Selected Region Context Map -->
-		{#if selectedRegion}
-			<div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
-				<div class="h-28 w-full">
-					<RegionStaticMap 
-						lat={selectedRegion.lat} 
-						lon={selectedRegion.lon} 
-						name={selectedRegion.nama} 
-						zoom={7} 
-					/>
-				</div>
-			</div>
-		{/if}
-
 		<div class="flex-1 overflow-y-auto p-2 space-y-1">
 			{#each filteredProvinces as province (province.id_adm_provinsi)}
 				<button 
@@ -237,6 +332,14 @@
 
 	<!-- Main Content Area -->
 	<div class="relative min-w-0 flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar">
+		{#if isRegionLoading}
+			<div class="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
+				<div class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+					<Loader2 size={16} class="animate-spin text-bkpm-blue" />
+					<span class="text-xs font-bold uppercase tracking-widest text-slate-500">{m.reg_loading_title()}</span>
+				</div>
+			</div>
+		{/if}
 		{#if selectedRegion}
 			<div class="w-full min-w-0 pb-8" in:fade={{ duration: 400 }}>
 				<!-- Hero Banner with Region Name -->
@@ -247,6 +350,7 @@
 							src={safeUrl(selectedRegion.image_url)} 
 							alt={selectedRegion.nama} 
 							class="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-[3000ms] ease-out" 
+							decoding="async"
 							onerror={() => imageError = true}
 						/>
 					{:else}
@@ -263,6 +367,8 @@
 								src={safeUrl(selectedRegion.logo_url)} 
 								alt="{selectedRegion.nama} Logo" 
 								class="h-full w-full object-contain drop-shadow-xl"
+								loading="lazy"
+								decoding="async"
 							/>
 						</div>
 					{/if}
@@ -369,6 +475,14 @@
 										{/each}
 									</div>
 								</div>
+							{:else if isRegionLoading}
+								<div class="py-16 rounded-3xl border border-slate-100 bg-slate-50/50 flex flex-col items-center justify-center text-center">
+									<div class="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-bkpm-blue mb-4">
+										<Loader2 size={20} class="animate-spin" />
+									</div>
+									<h4 class="text-base font-black text-slate-600 mb-1">{m.reg_loading_title()}</h4>
+									<p class="text-sm text-slate-400 max-w-sm text-balance">{m.reg_loading_desc()}</p>
+								</div>
 							{:else}
 								<div class="py-16 rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50/50 flex flex-col items-center justify-center text-center">
 									<div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-200 mb-4">
@@ -437,16 +551,32 @@
 										<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">{m.reg_infra_title()}</h2>
 										<p class="mt-1 text-xs font-medium text-slate-400">{m.reg_infra_subtitle({ region: selectedRegion.nama })}</p>
 									</div>
-									<div class="h-[450px]">
-										{#key selectedId}
-											<InfraInteractiveMap 
-												items={selectedRegion.infrastructure} 
-												projects={selectedRegion.projects}
-												centerLat={selectedRegion.lat} 
-												centerLon={selectedRegion.lon} 
-												regionName={selectedRegion.nama}
-											/>
-										{/key}
+									<div bind:this={infraSection} class="h-[450px]">
+										{#if shouldRenderInfraMap}
+											{#key selectedId}
+												<InfraInteractiveMap 
+													items={selectedRegion.infrastructure} 
+													projects={selectedRegion.projects}
+													centerLat={selectedRegion.lat} 
+													centerLon={selectedRegion.lon} 
+													regionName={selectedRegion.nama}
+												/>
+											{/key}
+										{:else}
+											<div class="flex h-full items-center justify-center rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-50 to-white px-6 text-center shadow-sm">
+												<div class="max-w-sm space-y-3">
+													<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-bkpm-blue/10 text-bkpm-blue">
+														<Map size={22} />
+													</div>
+													<div class="space-y-1">
+														<h3 class="text-sm font-black uppercase tracking-[0.2em] text-slate-900">Interactive Map Ready</h3>
+														<p class="text-xs font-medium leading-relaxed text-slate-500">
+															The detailed infrastructure map loads as you approach this section to keep the page responsive on first visit.
+														</p>
+													</div>
+												</div>
+											</div>
+										{/if}
 									</div>
 								</section>
 							{/if}
@@ -586,4 +716,3 @@
 		{/if}
 	</div>
 </div>
-

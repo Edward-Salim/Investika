@@ -84,6 +84,7 @@
 	let expandedInfographicIndex = $derived(
 		expandedInfographic ? infographicImages.findIndex((img) => img === expandedInfographic) : -1
 	);
+	let activeGalleryImage = $derived(galleryImages[activeGallerySlide] ?? null);
 	let formattedLastUpdated = $derived.by(() => {
 		if (!project?.fetched_at) return null;
 		const date = new Date(project.fetched_at);
@@ -124,6 +125,7 @@
 				src={safeUrl(project.image_url)} 
 				alt={project.nama} 
 				class="absolute inset-0 w-full h-full object-cover opacity-60"
+				decoding="async"
 				onerror={() => imageError = true}
 			/>
 		{:else}
@@ -171,7 +173,7 @@
 						<Share2 size={14} strokeWidth={2.5} />
 					</button>
 				</div>
-				<h1 class="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight mb-4 drop-shadow-2xl">
+				<h1 class="text-3xl md:text-5xl font-black text-white tracking-tighter leading-[1.1] mb-4 drop-shadow-2xl max-w-4xl">
 					{#if project.id_peluang === 928 || project.id === "928" || project.id_peluang === 1 || project.id === "1"}
 						{m.mock_p1_title()}
 					{:else if project.id_peluang === 933 || project.id === "933" || project.id_peluang === 2 || project.id === "2"}
@@ -412,15 +414,17 @@
 						</h3>
 						
 						<div class="relative rounded-3xl overflow-hidden bg-slate-900 aspect-video md:aspect-[21/9] group shadow-sm border border-slate-200">
-							{#each galleryImages as imgUrl, i}
-								<div class="absolute inset-0 transition-opacity duration-1000 ease-in-out {i === activeGallerySlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}">
+							{#if activeGalleryImage}
+								<div class="absolute inset-0 transition-opacity duration-500 ease-in-out opacity-100 z-10">
 									<img 
-										src={safeUrl(imgUrl)} 
-										alt="Project Gallery {i + 1}" 
+										src={safeUrl(activeGalleryImage)} 
+										alt="Project Gallery {activeGallerySlide + 1}" 
 										class="w-full h-full object-cover"
+										loading="eager"
+										decoding="async"
 									/>
 								</div>
-							{/each}
+							{/if}
 							
 							{#if galleryImages.length > 1}
 							<button 
@@ -460,7 +464,7 @@
 							{m.proj_sec_infographic()}
 						</h3>
 						
-						<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+						<div class="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
 							{#each infographicImages as imgUrl, i}
 								<button
 									type="button"
@@ -472,7 +476,9 @@
 											<img 
 												src={safeUrl(imgUrl)} 
 												alt="Project Infographic {i + 1}" 
-												class="h-[26rem] w-full object-contain"
+												class="block h-auto max-h-[32rem] w-full object-contain"
+												loading="lazy"
+												decoding="async"
 											/>
 										</div>
 									</div>
@@ -698,6 +704,7 @@
 				src={safeUrl(expandedInfographic)}
 				alt="Expanded project infographic"
 				class="max-h-[90vh] max-w-[90vw] rounded-2xl bg-white object-contain shadow-2xl"
+				decoding="async"
 			/>
 		</div>
 	</div>

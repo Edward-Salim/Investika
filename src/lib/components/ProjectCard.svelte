@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { Image, MapPin, Zap, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope } from 'lucide-svelte';
 	import { compareStore } from '$lib/state/compare.svelte';
-	import { fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
 	import { formatCurrency } from '$lib/utils/currency';
@@ -55,8 +54,7 @@
 
 <a
 	href="/project/{project.id}"
-	class="group bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 flex flex-col relative h-full"
-	in:fly={{ y: 20, duration: 400 }}
+	class="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-lg"
 >
 	<!-- Image strip -->
 	<div class="aspect-video w-full overflow-hidden bg-slate-50 relative flex items-center justify-center">
@@ -65,6 +63,8 @@
 				src={safeUrl(project.image)}
 				alt={project.title}
 				class="absolute inset-0 h-full w-full object-cover"
+				loading="lazy"
+				decoding="async"
 				onerror={(e) => (e.currentTarget as HTMLImageElement).classList.add('hidden')}
 			/>
 		{:else}
@@ -80,7 +80,7 @@
 		<!-- Top-right: status badge (IPRO / PPI) + sector icon -->
 		<div class="absolute top-3 right-3 z-10 flex items-center gap-1.5">
 			{#if project.status}
-				<div class="h-7 px-2.5 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md border border-white/20 shadow-sm">
+				<div class="flex h-7 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 px-2.5 shadow-sm">
 					<span class="text-[8px] font-black text-bkpm-blue uppercase tracking-tight">
 						{project.status}
 					</span>
@@ -88,7 +88,7 @@
 			{/if}
 			{#if project.category}
 				{@const catKey = 'cat_' + project.category.toLowerCase()}
-				<div class="h-7 w-7 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md border border-white/20 shadow-sm" 
+				<div class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 shadow-sm" 
 					 title={(m as any)[catKey] ? (m as any)[catKey]() : project.category}>
 					{#if categoryIcons[project.category]}
 						{@const Icon = categoryIcons[project.category]}
@@ -110,26 +110,24 @@
 				e.stopImmediatePropagation();
 				compareStore.toggle(project); 
 			}}
-			class="absolute bottom-4 left-0 z-20 flex flex-col items-center transition-all duration-300 group/bm cursor-pointer"
+			class="group/bm absolute bottom-4 left-0 z-20 flex flex-col items-center cursor-pointer transition-colors duration-200"
 			title={isCompared ? m.card_tooltip_remove() : compareStore.limitReached ? m.card_tooltip_max() : m.card_tooltip_add()}
 			role="button"
 			tabindex="0"
 		>
 			<div
-				class="flex items-center pl-3 pr-5 h-7 text-[9px] font-black uppercase tracking-wide shadow-md transition-all duration-300 select-none
+				class="flex h-7 items-center rounded-r-full border border-slate-200/80 pl-3 pr-4 text-[9px] font-black uppercase tracking-wide shadow-sm transition-colors duration-200 select-none
 					{isCompared
 						? 'text-white'
 						: compareStore.limitReached
 							? 'text-white'
 							: 'text-slate-600 group-hover/bm:text-bkpm-blue'}"
 				style="
-					clip-path: polygon(0% 0%, 88% 0%, 100% 50%, 88% 100%, 0% 100%);
 					background: {isCompared
 						? '#1755CF'
 						: compareStore.limitReached
 							? '#ef4444'
-							: 'rgba(255,255,255,0.92)'};
-					backdrop-filter: blur(8px);
+							: 'rgba(255,255,255,0.96)'};
 				"
 			>
 				{#if isCompared}

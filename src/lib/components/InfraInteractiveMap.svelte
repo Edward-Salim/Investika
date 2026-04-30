@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { browser } from '$app/environment';
 	import * as m from '$lib/paraglide/messages.js';
 	import { Maximize, Plane, Anchor, Zap, Factory, MapPin } from 'lucide-svelte';
 	// Leaflet styling
 	import 'leaflet/dist/leaflet.css';
+	import { getDetailedRegionBoundaries } from '$lib/utils/region-boundaries';
 
 	let { 
 		items = [], 
@@ -25,8 +27,8 @@
 	let geoJsonLayer: any;
 	let markerClusterGroup: any;
 	let projectsLayer: any;
-
-	const GEOJSON_URL = 'https://raw.githubusercontent.com/ans-4175/peta-indonesia-geojson/master/indonesia-prov.geojson';
+	let initializedRegionKey = $state('');
+	let hasMounted = $state(false);
 
 	const getInfraIcon = (type: string) => {
 		const lowerType = type?.toLowerCase() || '';
@@ -76,6 +78,16 @@
 		return 'other';
 	};
 
+	const getStableOffset = (seed: string | number, axis: 'lat' | 'lon') => {
+		const source = `${seed}:${axis}`;
+		let hash = 0;
+		for (let i = 0; i < source.length; i += 1) {
+			hash = (hash * 31 + source.charCodeAt(i)) >>> 0;
+		}
+
+		return ((hash % 1000) / 1000 - 0.5) * 0.1;
+	};
+
 	const typeCounts = $derived({
 		airport: items.filter((i: any) => getNormalizedType(i.infrastructure_type || i.jenis) === 'airport').length,
 		port: items.filter((i: any) => getNormalizedType(i.infrastructure_type || i.jenis) === 'port').length,
@@ -90,10 +102,6 @@
 		
 		markerClusterGroup.clearLayers();
 		projectsLayer.clearLayers();
-
-		console.log(`[InfraMap] renderMarkers called. Items: ${items?.length}, Projects: ${projects?.length}`);
-		let addedInfraCount = 0;
-		let skippedInfraCount = 0;
 
 		// Infrastructure Markers (Clustered)
 		items.forEach((item: any) => {
@@ -141,12 +149,8 @@
 				`, { closeButton: false, offset: [0, -4], className: 'infra-custom-popup' });
 				
 				markerClusterGroup.addLayer(marker);
-				addedInfraCount++;
-			} else {
-				skippedInfraCount++;
 			}
 		});
-		console.log(`[InfraMap] Added ${addedInfraCount} infra markers, skipped ${skippedInfraCount}`);
 
 		// Investment Opportunity Pins (Standalone - Not Clustered)
 		if (activeFilters.includes('investment')) {
@@ -157,8 +161,9 @@
 
 				// Fallback to region center with small jitter if missing
 				if ((isNaN(lat) || lat === 0) && centerLat) {
-					lat = centerLat + (Math.random() - 0.5) * 0.1;
-					lon = centerLon! + (Math.random() - 0.5) * 0.1;
+					const seed = project.id || project.id_peluang || project.title || project.nama || 'project';
+					lat = centerLat + getStableOffset(seed, 'lat');
+					lon = centerLon! + getStableOffset(seed, 'lon');
 				}
 
 				// Sanity check coordinates for Indonesia bounds and proximity to center
@@ -270,8 +275,7 @@
 
 		// Fetch and draw boundary (Non-blocking for markers)
 		try {
-			const response = await fetch(GEOJSON_URL);
-			const data = await response.json();
+			const data = await getDetailedRegionBoundaries();
 			const targetName = regionName.toUpperCase()
 				.replace('PROVINSI ', '')
 				.replace('DAERAH ISTIMEWA ', '')
@@ -349,19 +353,27 @@
 	const zoomOut = () => map?.zoomOut();
 
 	$effect(() => {
-		// Track ALL region-dependent props so any change triggers a full re-init
-		const _centerLat = centerLat;
-		const _centerLon = centerLon;
-		const _items = items;
-		const _projects = projects;
-		const _regionName = regionName;
+		const regionKey = `${regionName}:${centerLat}:${centerLon}`;
 
-		if (_centerLat && _centerLon && mapElement) {
+		if (browser && hasMounted && centerLat && centerLon && mapElement && regionKey !== initializedRegionKey) {
+			initializedRegionKey = regionKey;
 			initMap();
 		}
 	});
 
+	$effect(() => {
+		items;
+		projects;
+		activeFilters;
+
+		if (map && markerClusterGroup && projectsLayer && L) {
+			renderMarkers();
+		}
+	});
+
 	onMount(() => {
+		hasMounted = true;
+
 		const link1 = document.createElement('link');
 		link1.rel = 'stylesheet';
 		link1.href = 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css';

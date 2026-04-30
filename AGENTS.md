@@ -57,5 +57,10 @@ To maintain a clean and readable project history, we use **Conventional Commits*
 
 ### Rule of thumb
 
-> If you're writing `import x from '...'` for it — it belongs in `src/lib/assets/`.  
-> If it needs to be accessed as `/filename.ext` with no hashing — it goes in `static/`.
+---
+
+## Naming Conventions
+
+**IMPORTANT — Always use the correct brand casing:**
+
+- **VestiAI**: Always use "VestiAI" (v-e-s-t-i-A-I). Never "VESTIAI", "Vestiai", or "vestiai". This applies to UI text, code comments, and documentation.

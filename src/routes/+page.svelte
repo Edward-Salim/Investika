@@ -3,6 +3,7 @@
 	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, Search, ChevronUp, LayoutGrid, Truck, Sprout, Cpu, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope, RotateCcw, Image, Paperclip } from 'lucide-svelte';
 	import { fade, fly, slide } from 'svelte/transition';
 	import { cubicOut, cubicInOut } from 'svelte/easing';
+	import { onMount } from 'svelte';
 	import bkpmEmblem from '$lib/assets/logos/bkpm-emblem.png';
 	import AuroraBackground from '$lib/components/AuroraBackground.svelte';
 	import { searchStore } from '$lib/state/search.svelte.js';
@@ -15,36 +16,164 @@
 	import vestiAIAsk from '$lib/assets/logos/vestiAI-ask.png';
 
 	let { data } = $props<{ data: PageData }>();
-
-	// Project Images
-	import surabayaPortImg from '$lib/assets/projects/surabaya-port.png';
-	import floresGeothermalImg from '$lib/assets/projects/flores-geothermal.png';
+	const serverProjects = $derived(data.projects);
+	const totalProjects = $derived(data.totalProjects ?? serverProjects.length);
+	const homepagePageSize = $derived(serverProjects.length || 18);
 
 	let inputValue = $state(searchStore.inputValue);
 	let aiSummary = $state(searchStore.aiSummary);
 	let isAiSummaryExpanded = $state(searchStore.isAiSummaryExpanded);
-	let isSearching = $state(searchStore.isSearching);
+	let viewMode = $state<'hero' | 'catalog' | 'search'>(searchStore.isSearching ? 'search' : 'hero');
 	let activeFilter = $state(searchStore.activeFilter);
 	let isFilterOpen = $state(searchStore.isFilterOpen);
 	let isSectorDropdownOpen = $state(false);
 	let committedSearch = $state(searchStore.committedSearch);
 
 	let collapseTimeout: ReturnType<typeof setTimeout>;
+	let catalogSearchTimeout: ReturnType<typeof setTimeout> | undefined;
+	let catalogProjects = $state<PageData['projects']>([]);
 	let displayedProjects = $state<PageData['projects']>([]);
+	let hasMoreCatalogProjects = $state(false);
+	let isLoadingMoreProjects = $state(false);
+	let isCatalogSearchLoading = $state(false);
+	let catalogSearchResults = $state<PageData['projects']>([]);
+	let loadMoreSentinel = $state<HTMLDivElement | null>(null);
+	let loadMoreObserver: IntersectionObserver | null = null;
 
 	$effect(() => {
-		if (isSearching && searchStore.displayedProjects.length > 0) {
-			displayedProjects = searchStore.displayedProjects as PageData['projects'];
-			return;
+		if (catalogProjects.length === 0 && serverProjects.length > 0) {
+			catalogProjects = serverProjects;
+			hasMoreCatalogProjects = serverProjects.length >= homepagePageSize;
 		}
-
-		displayedProjects = data.projects;
 	});
 
 	$effect(() => {
-		if (!isSearching) {
-			displayedProjects = data.projects;
+		if (viewMode === 'search') {
+			const storedResults = Array.isArray(searchStore.displayedProjects)
+				? (searchStore.displayedProjects as PageData['projects'])
+				: [];
+
+			if (storedResults.length > 0) {
+				displayedProjects = storedResults;
+				return;
+			}
+
+			// Recover gracefully from persisted "search mode" without any stored results.
+			viewMode = 'hero';
+			searchStore.isSearching = false;
+			searchStore.displayedProjects = [];
+			displayedProjects = catalogProjects;
+			return;
 		}
+
+		displayedProjects = catalogProjects;
+	});
+
+	$effect(() => {
+		if (viewMode !== 'catalog') return;
+
+		const query = committedSearch.trim();
+		if (catalogSearchTimeout) clearTimeout(catalogSearchTimeout);
+
+		if (!query) {
+			isCatalogSearchLoading = false;
+			catalogSearchResults = [];
+			return;
+		}
+
+		catalogSearchTimeout = setTimeout(async () => {
+			isCatalogSearchLoading = true;
+			try {
+				const response = await fetch(`/api/projects/search?q=${encodeURIComponent(query)}`);
+				const payload = await response.json().catch(() => null);
+
+				if (!response.ok || !Array.isArray(payload?.projects)) {
+					throw new Error(payload?.error || 'Catalog search failed');
+				}
+
+				catalogSearchResults = payload.projects as PageData['projects'];
+			} catch (error) {
+				console.error('Catalog text search failed:', error);
+				catalogSearchResults = [];
+			} finally {
+				isCatalogSearchLoading = false;
+			}
+		}, 220);
+
+		return () => {
+			if (catalogSearchTimeout) clearTimeout(catalogSearchTimeout);
+		};
+	});
+
+	async function loadMoreProjects() {
+		if (viewMode !== 'catalog' || isLoadingMoreProjects || !hasMoreCatalogProjects) return;
+
+		isLoadingMoreProjects = true;
+
+		try {
+			const response = await fetch(
+				`/api/projects?offset=${catalogProjects.length}&limit=${homepagePageSize}`
+			);
+			const payload = await response.json().catch(() => null);
+
+			if (!response.ok || !Array.isArray(payload?.projects)) {
+				throw new Error(payload?.error || 'Failed to load more projects');
+			}
+
+			if (payload.projects.length === 0) {
+				hasMoreCatalogProjects = false;
+				return;
+			}
+
+			const existingIds = new Set(catalogProjects.map((project) => project.id));
+			const appendedProjects = payload.projects.filter(
+				(project: PageData['projects'][number]) => !existingIds.has(project.id)
+			);
+
+			if (appendedProjects.length > 0) {
+				catalogProjects = [...catalogProjects, ...appendedProjects];
+			}
+
+			hasMoreCatalogProjects = Boolean(payload.hasMore) && appendedProjects.length > 0;
+		} catch (error) {
+			console.error('Failed to load more homepage projects:', error);
+			hasMoreCatalogProjects = false;
+		} finally {
+			isLoadingMoreProjects = false;
+		}
+	}
+
+	onMount(() => {
+		// Check for view=catalog in URL to auto-open catalog section
+		const params = new URLSearchParams(window.location.search);
+		if (params.get('view') === 'catalog') {
+			openCatalogView();
+		}
+
+		if (typeof IntersectionObserver === 'undefined') return;
+
+		loadMoreObserver = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) {
+					void loadMoreProjects();
+				}
+			},
+			{ rootMargin: '600px 0px' }
+		);
+
+		return () => {
+			loadMoreObserver?.disconnect();
+		};
+	});
+
+	$effect(() => {
+		if (!loadMoreObserver || !loadMoreSentinel || viewMode !== 'catalog' || !hasMoreCatalogProjects) return;
+		loadMoreObserver.observe(loadMoreSentinel);
+		return () => {
+			if (loadMoreSentinel) {
+				loadMoreObserver?.unobserve(loadMoreSentinel);
+			}
+		};
 	});
 
 	// ── ADVANCED FILTER STATE ──
@@ -58,7 +187,7 @@
 	let sortBy = $state<'default' | 'investment-asc' | 'investment-desc' | 'alpha' | 'irr-desc'>(searchStore.sortBy);
 
 	$effect(() => {
-		if (!isSearching && inputValue === '') {
+		if (viewMode !== 'search' && inputValue === '') {
 			committedSearch = '';
 		}
 	});
@@ -100,8 +229,7 @@
 		searchStore.inputValue = inputValue;
 		searchStore.aiSummary = aiSummary;
 		searchStore.isAiSummaryExpanded = isAiSummaryExpanded;
-		searchStore.isSearching = isSearching;
-		searchStore.displayedProjects = displayedProjects;
+		searchStore.isSearching = viewMode === 'search';
 		searchStore.activeFilter = activeFilter;
 		searchStore.isFilterOpen = isFilterOpen;
 		searchStore.minInvestment = minInvestment;
@@ -116,8 +244,11 @@
 	});
 
 	function resetSearch() {
-		displayedProjects = data.projects;
-		isSearching = false;
+		catalogProjects = serverProjects;
+		displayedProjects = serverProjects;
+		hasMoreCatalogProjects = serverProjects.length >= homepagePageSize;
+		searchStore.displayedProjects = [];
+		viewMode = 'hero';
 		inputValue = '';
 		committedSearch = '';
 		aiSummary = '';
@@ -127,14 +258,18 @@
 	}
 
 	function clearAll() {
-		displayedProjects = data.projects;
+		catalogProjects = serverProjects;
+		displayedProjects = serverProjects;
+		hasMoreCatalogProjects = serverProjects.length >= homepagePageSize;
+		searchStore.displayedProjects = [];
+		viewMode = 'catalog';
 		inputValue = '';
 		committedSearch = '';
 		aiSummary = '';
 		isAiSummaryExpanded = false;
 		activeFilter = 'All';
 		clearAdvancedFilters();
-		// We stay in the dashboard (isSearching remains true)
+		// We stay in the catalog dashboard view
 	}
 
 	const sectorFilters = $derived([
@@ -234,7 +369,12 @@
 		return score;
 	}
 
-	const allProjects = $derived(displayedProjects);
+	const allProjects = $derived(
+		viewMode === 'catalog' && committedSearch.trim()
+			? catalogSearchResults
+			: displayedProjects
+	);
+	const normalizedCommittedSearch = $derived(committedSearch.trim().toLowerCase());
 
 	const hasAdvancedFilters = $derived(
 		selectedStatuses.length > 0 ||
@@ -255,10 +395,12 @@
 	const filteredProjects = $derived(
 		allProjects
 			.filter((p: any) => {
-				const matchesSearch = !committedSearch ||
-					p.title.toLowerCase().includes(committedSearch.toLowerCase()) ||
-					p.category.toLowerCase().includes(committedSearch.toLowerCase()) ||
-					p.location.toLowerCase().includes(committedSearch.toLowerCase());
+				const matchesSearch = (viewMode === 'catalog' && normalizedCommittedSearch)
+					? true
+					: !normalizedCommittedSearch ||
+					p.title.toLowerCase().includes(normalizedCommittedSearch) ||
+					p.category.toLowerCase().includes(normalizedCommittedSearch) ||
+					p.location.toLowerCase().includes(normalizedCommittedSearch);
 
 				const matchesCategory = activeFilter === 'All' || p.category === activeFilter;
 
@@ -290,6 +432,14 @@
 				return a.title.localeCompare(b.title);
 			})
 	);
+
+	const visibleProjectCountLabel = $derived.by(() => {
+		if (viewMode === 'catalog' && !committedSearch.trim() && activeFilter === 'All' && !hasAdvancedFilters) {
+			return totalProjects;
+		}
+
+		return filteredProjects.length;
+	});
 
 	const quickLinks = [
 		m.home_quick_1(),
@@ -328,7 +478,7 @@
 		}
 
 		clearAdvancedFilters();
-		isSearching = true;
+		viewMode = 'search';
 		isAiSummaryExpanded = true;
 		committedSearch = query;
 		searchStore.isLoading = true;
@@ -348,12 +498,17 @@
 			}
 
 			displayedProjects = Array.isArray(payload.projects) ? payload.projects : [];
+			searchStore.displayedProjects = displayedProjects;
 			aiSummary = typeof payload.summary === 'string' && payload.summary.trim()
 				? payload.summary.trim()
 				: m.home_ai_results_count({ count: displayedProjects.length });
 			inputValue = '';
 		} catch {
-			displayedProjects = data.projects;
+			catalogProjects = serverProjects;
+			displayedProjects = serverProjects;
+			hasMoreCatalogProjects = serverProjects.length >= homepagePageSize;
+			searchStore.displayedProjects = [];
+			viewMode = 'catalog';
 			aiSummary = m.home_ai_search_error();
 		} finally {
 			searchStore.isLoading = false;
@@ -371,13 +526,16 @@
 	}
 
 	function openCatalogView() {
-		displayedProjects = data.projects;
+		catalogProjects = serverProjects;
+		displayedProjects = serverProjects;
+		hasMoreCatalogProjects = serverProjects.length >= homepagePageSize;
+		searchStore.displayedProjects = [];
 		aiSummary = '';
 		isAiSummaryExpanded = false;
 		committedSearch = '';
 		activeFilter = 'All';
 		clearAdvancedFilters();
-		isSearching = true;
+		viewMode = 'catalog';
 	}
 
 	function autosize(node: HTMLTextAreaElement) {
@@ -397,7 +555,7 @@
 <div class="w-full h-full flex flex-col overflow-hidden">
 
 
-{#if !isSearching}
+{#if viewMode === 'hero'}
 	<!-- ── INITIAL HERO VIEW (before first search) ── -->
 	<AuroraBackground class="flex-1 w-full">
 		<div
@@ -554,7 +712,7 @@
 
 				<div class="flex items-center gap-2 shrink-0">
 					<span class="px-1 text-xs font-black text-slate-500">
-						{m.filter_projects_count({ count: filteredProjects.length })}
+						{m.filter_projects_count({ count: visibleProjectCountLabel })}
 					</span>
 					<button
 						onclick={() => isFilterOpen = !isFilterOpen}
@@ -678,7 +836,7 @@
 
 		<!-- Project grid — more generous spacing -->
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-12 max-w-[1400px] mx-auto">
-			{#if searchStore.isLoading}
+			{#if searchStore.isLoading || isCatalogSearchLoading}
 				{#each Array(6) as _}
 					<ProjectCardSkeleton />
 				{/each}
@@ -699,6 +857,24 @@
 				{/each}
 			{/if}
 		</div>
+
+		{#if viewMode === 'catalog'}
+			<div bind:this={loadMoreSentinel} class="mx-auto h-px max-w-[1400px] w-full"></div>
+			{#if isLoadingMoreProjects}
+				<div class="mx-auto flex max-w-[1400px] items-center justify-center pb-10 pt-2">
+					<div class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 shadow-sm">
+						<div class="h-4 w-4 rounded-full border-2 border-slate-200 border-t-bkpm-blue animate-spin"></div>
+						Loading more projects
+					</div>
+				</div>
+			{:else if hasMoreCatalogProjects}
+				<div class="mx-auto flex max-w-[1400px] justify-center pb-10 pt-2">
+					<p class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+						Scroll for more projects
+					</p>
+				</div>
+			{/if}
+		{/if}
 	</div>
 
 	<!-- FIXED BOTTOM: AI summary + search bar -->

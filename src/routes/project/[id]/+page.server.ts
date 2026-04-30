@@ -5,6 +5,13 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { enrichProjectWithMockData, generateMockProject } from '$lib/server/mock';
 
+function compareRecordId(a: { id?: bigint | number | string | null }, b: { id?: bigint | number | string | null }) {
+	const aId = a?.id == null ? 0n : BigInt(a.id);
+	const bId = b?.id == null ? 0n : BigInt(b.id);
+	if (aId === bId) return 0;
+	return aId < bId ? -1 : 1;
+}
+
 export const load: PageServerLoad = async ({ params }) => {
 	const id = parseInt(params.id);
 	
@@ -12,11 +19,15 @@ export const load: PageServerLoad = async ({ params }) => {
 		throw error(400, 'Invalid project ID');
 	}
 
+	if (!db) {
+		return {
+			project: enrichProjectWithMockData(generateMockProject(id))
+		};
+	}
+
 	let project;
 
 	try {
-		if (!db) throw new Error('DB connection unavailable');
-
 		// Fetch project with its details using Drizzle relational query
 		project = await db.query.investmentOpportunities.findFirst({
 			where: eq(investmentOpportunities.id_peluang, id),
@@ -48,6 +59,14 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	// Enrich with mock data for missing fields
 	project = enrichProjectWithMockData(project);
+
+	if (Array.isArray(project.galleries)) {
+		project.galleries = [...project.galleries].sort(compareRecordId);
+	}
+
+	if (Array.isArray(project.infos)) {
+		project.infos = [...project.infos].sort(compareRecordId);
+	}
 
 	return {
 		project

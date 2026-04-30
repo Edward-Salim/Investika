@@ -1,15 +1,16 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { browser } from '$app/environment';
 	// Leaflet styling
 	import 'leaflet/dist/leaflet.css';
+	import { getSimpleRegionBoundaries } from '$lib/utils/region-boundaries';
 
 	let { lat, lon, zoom = 7, name = '' } = $props<{ lat: number | null, lon: number | null, zoom?: number, name?: string }>();
 
 	let mapElement: HTMLElement;
 	let map: any;
 	let geoJsonLayer: any;
-
-	const GEOJSON_URL = 'https://raw.githubusercontent.com/superpikar/indonesia-geojson/master/indonesia-province-simple.json';
+	let hasMounted = $state(false);
 
 	const initMap = async () => {
 		if (!lat || !lon) return;
@@ -39,8 +40,7 @@
 
 		// Fetch and draw boundary
 		try {
-			const response = await fetch(GEOJSON_URL);
-			const data = await response.json();
+			const data = await getSimpleRegionBoundaries();
 			
 			// Normalize name for matching
 			const targetName = name.toUpperCase().replace('PROVINSI ', '').replace('DAERAH ISTIMEWA ', '').trim();
@@ -74,12 +74,14 @@
 	};
 
 	$effect(() => {
-		if (lat && lon && mapElement) {
+		if (browser && hasMounted && lat && lon && mapElement) {
 			initMap();
 		}
 	});
 
 	onMount(() => {
+		hasMounted = true;
+
 		return () => {
 			map?.remove();
 		};

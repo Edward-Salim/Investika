@@ -8,6 +8,7 @@ type RegionNewsItem = {
 	sourceUrl: string;
 	sourceIcon: string;
 	date: string;
+	publishedAt: number;
 };
 
 function decodeXml(value: string) {
@@ -62,6 +63,7 @@ function parseGoogleNewsRss(xml: string): RegionNewsItem[] {
 			const fallbackSource = titleParts.length > 1 ? titleParts[titleParts.length - 1] : 'Google News';
 			const title = titleParts.length > 1 ? titleParts.slice(0, -1).join(' - ') : fullTitle;
 			const { source, sourceUrl, sourceIcon } = getSourceData(item, fallbackSource);
+			const publishedAt = new Date(pubDate).getTime();
 
 			return {
 				title,
@@ -69,10 +71,12 @@ function parseGoogleNewsRss(xml: string): RegionNewsItem[] {
 				source,
 				sourceUrl,
 				sourceIcon,
-				date: formatRelativeDate(pubDate)
+				date: formatRelativeDate(pubDate),
+				publishedAt: Number.isNaN(publishedAt) ? 0 : publishedAt
 			};
 		})
 		.filter((item) => item.title && item.link)
+		.sort((a, b) => b.publishedAt - a.publishedAt)
 		.slice(0, 4);
 }
 
