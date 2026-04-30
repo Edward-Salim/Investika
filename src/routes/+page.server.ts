@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
-import { investmentOpportunities, admProvinces } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { admProvinces } from '$lib/server/db/schema';
+import { mapProjectToCard } from '$lib/projects/project-card';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
@@ -27,6 +27,6 @@ export const load: PageServerLoad = async () => {
 	}));
 
 	return {
-		projects: projectsWithWilayah
+		projects: projectsWithWilayah.map(mapProjectToCard)
 	};
 };

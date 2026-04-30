@@ -28,6 +28,13 @@
 	let committedSearch = $state(''); // Only updates on submit, not on every keystroke
 	
 	let collapseTimeout: ReturnType<typeof setTimeout>;
+	let displayedProjects = $state<PageData['projects']>([]);
+
+	$effect(() => {
+		if (!isSearching) {
+			displayedProjects = data.projects;
+		}
+	});
 
 	// ── ADVANCED FILTER STATE ──
 	let minInvestment = $state(searchStore.minInvestment);
@@ -98,6 +105,7 @@
 	}); 
 
 	function resetSearch() {
+		displayedProjects = data.projects;
 		isSearching = false;
 		inputValue = '';
 		committedSearch = '';
@@ -198,65 +206,13 @@
 		sortBy = 'default';
 	}
 
-	// Parse investment string "$120M" → numeric millions
-	function parseInvestment(s: string): number {
-		const n = parseFloat(s.replace(/[^0-9.]/g, ''));
-		if (s.includes('B')) return n * 1000;
-		return n;
-	}
-
-	const categoryMap: Record<string, string> = {
-		'Pariwisata': 'Tourism',
-		'Infrastruktur': 'Infrastructure',
-		'Kawasan Industri dan Real Estate': 'Property',
-		'Jasa dan Kawasan': 'Services',
-		'Industri Manufaktur': 'Manufacturing',
-		'Pertanian dan Peternakan': 'Agriculture',
-		'Perikanan': 'Fisheries',
-		'Energi': 'Energy',
-		'Pertambangan': 'Mining',
-		'Kesehatan': 'Healthcare',
-		'Transportasi dan Logistik': 'Logistics',
-		'Kehutanan': 'Agriculture',
-		'Perdagangan': 'Retail'
-	};
-
-	const allProjects = $derived(data.projects.map((p: any) => {
-		const mappedCategory = p.nama_sektor_peluang ? (categoryMap[p.nama_sektor_peluang] || p.nama_sektor_peluang) : 'Other';
-		
-		const parseInvest = (s: string | null) => {
-			if (!s) return 0;
-			const n = parseFloat(s.replace(/[^0-9,]/g, '').replace(',', '.'));
-			if (s.includes('T')) return n * 1000;
-			return n;
-		};
-
-		const parseIrr = (s: string | null) => s ? parseFloat(s.replace(/[^0-9.,]/g, '').replace(',', '.')) : 0;
-
-		return {
-			id: p.id_peluang.toString(),
-			title: p.nama || 'Untitled Project',
-			category: mappedCategory,
-			status: p.status || p.status_proyek || 'Active',
-			location: p.nama_provinsi || p.nama_kabkot || 'Indonesia',
-			provinceId: p.id_adm_provinsi,
-			wilayah: p.wilayah_group || null,
-			investment: p.nilai_investasi || 'TBD',
-			irr: p.nilai_irr || 'TBD',
-			npv: p.nilai_npv || 'TBD',
-			image: p.image_url || null,
-			investmentNum: p.nilai_investasi_amount ? parseFloat(p.nilai_investasi_amount) : parseInvest(p.nilai_investasi),
-			irrNum: p.nilai_irr_percent ? parseFloat(p.nilai_irr_percent) : parseIrr(p.nilai_irr),
-			npvNum: p.nilai_npv_amount ? parseFloat(p.nilai_npv_amount) : parseInvest(p.nilai_npv)
-		};
-	}));
+	const allProjects = $derived(displayedProjects);
 
 	const hasAdvancedFilters = $derived(
-		selectedStatuses.length > 0 || 
-		selectedRegions.length > 0 || 
-		selectedESG.length > 0 || 
-		sortBy !== 'default' || 
-		minInvestment > 0 || 
+		selectedStatuses.length > 0 ||
+		selectedRegions.length > 0 ||
+		sortBy !== 'default' ||
+		minInvestment > 0 ||
 		maxInvestment < 100000 ||
 		minIRR > 0
 	);
@@ -324,86 +280,47 @@
 		infrastructure: { filter: 'Infrastructure', response: 'National strategic infrastructure projects include toll roads, bridges, and smart city developments.' },
 	};
 
-	function handleSearch() {
-		if (!inputValue.trim()) {
+	async function handleSearch() {
+		const query = inputValue.trim();
+		if (!query) {
 			committedSearch = '';
 			return;
 		}
 
-		const query = inputValue.toLowerCase();
-		clearAdvancedFilters(); // Reset for a clean AI parse
-
-		// ── COMPLEX AI PARSING (MOCK AGENT LOGIC) ──
-		let detectedFilters = [];
-
-		// Yield/IRR
-		if (query.includes('yield') || query.includes('return') || query.includes('profitable') || query.includes('high irr')) {
-			minIRR = 15;
-			sortBy = 'irr-desc';
-			detectedFilters.push('High Yield (15%+)');
-		}
-
-		// Sustainability/ESG
-		if (query.includes('sustainable') || query.includes('green') || query.includes('esg') || query.includes('impact') || query.includes('clean')) {
-			selectedESG = ['AAA'];
-			detectedFilters.push('AAA Sustainability Rating');
-		}
-
-		// Readiness
-		if (query.includes('ready') || query.includes('available') || query.includes('immediate') || query.includes('now')) {
-			selectedStatuses = ['Ready to Offer'];
-			detectedFilters.push('Ready to Offer Status');
-		}
-
-		// Investment Size
-		if (query.includes('big') || query.includes('large') || query.includes('billion') || query.includes('major')) {
-			minInvestment = 1000;
-			detectedFilters.push('Billion-Dollar Projects');
-		} else if (query.includes('small') || query.includes('entry') || query.includes('medium')) {
-			maxInvestment = 500;
-			detectedFilters.push('Mid-Cap Opportunities');
-		}
-
-		// Region Parsing
-		const regions = [
-			{ kw: 'bali', name: 'Bali' },
-			{ kw: 'kalimantan', name: 'East Kalimantan' },
-			{ kw: 'java', name: 'West Java' },
-			{ kw: 'jakarta', name: 'Jakarta, DKI' },
-			{ kw: 'sulawesi', name: 'Central Sulawesi' },
-			{ kw: 'papua', name: 'South Papua' }
-		];
-		regions.forEach(r => {
-			if (query.includes(r.kw)) {
-				selectedRegions = [...selectedRegions, r.name];
-				detectedFilters.push(r.name);
-			}
-		});
-
-		// Sector Matching
-		const matched = Object.entries(filterKeywords).find(([kw]) => query.includes(kw));
-		if (matched) {
-			const [, { filter, response }] = matched;
-			activeFilter = filter;
-			aiSummary = detectedFilters.length > 0 
-				? `${response} I've also applied advanced filters for ${detectedFilters.join(', ')} based on your specific requirements.`
-				: response;
-		} else {
-			activeFilter = 'All';
-			aiSummary = detectedFilters.length > 0
-				? `I've analyzed our project pipeline and identified several opportunities matching your criteria for ${detectedFilters.join(', ')}.`
-				: `I've analyzed our strategic pipeline for "${inputValue}" and identified several key projects that align with your investment profile.`;
-		}
-
+		clearAdvancedFilters();
+		activeFilter = 'All';
 		isSearching = true;
-		committedSearch = inputValue;
-		inputValue = '';
 		isAiSummaryExpanded = true;
-		
-		if (collapseTimeout) clearTimeout(collapseTimeout);
-		collapseTimeout = setTimeout(() => {
-			isAiSummaryExpanded = false;
-		}, 6000);
+		committedSearch = query;
+
+		try {
+			const response = await fetch('/api/ai-search-projects', {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json'
+				},
+				body: JSON.stringify({ query })
+			});
+
+			const payload = await response.json().catch(() => null);
+			if (!response.ok || !payload) {
+				throw new Error('AI search failed');
+			}
+
+			displayedProjects = Array.isArray(payload.projects) ? payload.projects : [];
+			aiSummary = typeof payload.summary === 'string' && payload.summary.trim()
+				? payload.summary.trim()
+				: `I found ${displayedProjects.length} projects matching your query.`;
+			inputValue = '';
+		} catch {
+			displayedProjects = data.projects;
+			aiSummary = `I couldn't complete that AI search right now, so I'm still showing the current project list.`;
+		} finally {
+			if (collapseTimeout) clearTimeout(collapseTimeout);
+			collapseTimeout = setTimeout(() => {
+				isAiSummaryExpanded = false;
+			}, 6000);
+		}
 	}
 
 
