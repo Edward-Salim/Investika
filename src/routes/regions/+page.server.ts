@@ -12,7 +12,7 @@ import {
 } from '$lib/server/db/schema';
 import { sql, eq, and, desc } from 'drizzle-orm';
 import type { PageServerLoad } from './$types';
-import { enrichProjectWithMockData, getMockProvinces, getMockProjects } from '$lib/server/mock';
+import { enrichProjectWithMockData, getMockProvinces, getMockProjects, enrichInfraWithMockData } from '$lib/server/mock';
 
 export const load: PageServerLoad = async () => {
     try {
@@ -154,8 +154,10 @@ export const load: PageServerLoad = async () => {
                 deskripsi: profileMap[p.id_adm_provinsi]?.deskripsi || profileMap[p.id_adm_provinsi]?.profil || null,
                 projects: projectsByProvince[p.id_adm_provinsi] || [],
                 offices: officeMap[p.id_adm_provinsi] || [],
-                infrastructure: infraMap[p.id_adm_provinsi] || [],
-                sectorInvestment: sectorInvMap[p.id_adm_provinsi] || []
+                infrastructure: (infraMap[p.id_adm_provinsi] || []).map(i => enrichInfraWithMockData(i, p)),
+                sectorInvestment: sectorInvMap[p.id_adm_provinsi] || [],
+                lon: p.lon,
+                lat: p.lat
             }))
         };
     } catch (e: any) {

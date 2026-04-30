@@ -40,6 +40,8 @@
 		/^\/(id|zh|ja|ko)?\/?project\/[^/]+$/.test(page.url.pathname) ||
 		/^\/project\/[^/]+$/.test(page.url.pathname)
 	);
+
+	let displaySegments = $derived(pathSegments.filter(s => !['en', 'id', 'zh', 'ja', 'ko'].includes(s.toLowerCase())));
 </script>
 
 <svelte:head>
@@ -86,7 +88,7 @@
 			<!-- 1. Overview -->
 			<a
 				href={localizeUrl('/', { locale: getLocale() }).pathname}
-				title="Home"
+				title={m.nav_home_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
 					{isOverviewPage ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
@@ -106,7 +108,7 @@
 			<!-- 2. Regions -->
 			<a
 				href="/regions"
-				title="Regions"
+				title={m.nav_regions_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
 					{page.url.pathname === '/regions' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
@@ -119,14 +121,14 @@
 						{page.url.pathname === '/regions' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
-					Regions
+					{m.nav_regions()}
 				</span>
 			</a>
 
 			<!-- 3. AI Compare -->
 			<a
 				href="/compare"
-				title="AI Compare"
+				title={m.nav_compare_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
 					{page.url.pathname === '/compare' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
@@ -136,18 +138,13 @@
 					<BrainCircuit
 						size={18}
 						strokeWidth={2.5}
-						class="transition-colors {page.url.pathname === '/compare' ? 'text-cyan-400' : 'text-cyan-400/70 group-hover:text-cyan-400'}"
+						class="transition-colors {page.url.pathname === '/compare' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
 					/>
-					{#if compareStore.projects.length > 0}
-						<span class="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-400 text-[8px] font-black text-slate-900 shadow ring-2 ring-bkpm-blue">
-							{compareStore.projects.length}
-						</span>
-					{/if}
 				</div>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
-					AI Compare
+					{m.nav_compare()}
 					{#if compareStore.projects.length > 0}
-						<span class="ml-1.5 inline-flex items-center justify-center h-4 px-1.5 rounded-full bg-cyan-400/20 text-cyan-300 text-[8px] font-black">{compareStore.projects.length}/3</span>
+						<span class="ml-1.5 inline-flex items-center justify-center h-4 px-1.5 rounded-full font-black {page.url.pathname === '/compare' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/50 group-hover:bg-white/20 group-hover:text-white'} text-[8px]">{compareStore.projects.length}/3</span>
 					{/if}
 				</span>
 			</a>
@@ -157,7 +154,7 @@
 			<!-- 4. Policies -->
 			<a
 				href="/policies"
-				title="Policies"
+				title={m.nav_policies_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
 					{page.url.pathname === '/policies' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
@@ -177,7 +174,7 @@
 			<!-- 5. Wiki -->
 			<a
 				href="/wiki"
-				title="Wiki"
+				title={m.nav_wiki_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
 					{page.url.pathname === '/wiki' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
@@ -190,14 +187,14 @@
 						{page.url.pathname === '/wiki' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
-					Wiki
+					{m.nav_wiki()}
 				</span>
 			</a>
 
 			<!-- 6. Submit Project -->
 			<a
 				href="/submit"
-				title="Submit Project"
+				title={m.nav_submit_tooltip()}
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
 					{page.url.pathname === '/submit' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
@@ -210,7 +207,7 @@
 						{page.url.pathname === '/submit' ? 'text-white' : 'text-white/70 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
-					Submit Project
+					{m.nav_submit()}
 				</span>
 			</a>
 		</nav>
@@ -261,26 +258,32 @@
 
 				<!-- Breadcrumbs -->
 				<div class="hidden md:flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-					<!-- Always show Dashboard first (removed per request) -->
-					{#if pathSegments.length === 0}
-						<span class="text-bkpm-blue">Dashboard</span>
-					{/if}
+					<!-- Always show Dashboard first -->
+					<a href="/" class="hover:text-bkpm-blue transition-colors underline decoration-bkpm-blue/30 underline-offset-4 {pathSegments.length === 0 || (pathSegments.length === 1 && ['en','id','zh','ja','ko'].includes(pathSegments[0])) ? 'text-bkpm-blue' : 'text-slate-400'}">
+						{m.nav_dashboard()}
+					</a>
 					
-					{#if pathSegments.length > 0}
+					{#each displaySegments as segment, i}
 						<ChevronRight size={12} class="mx-1.5 text-slate-300" strokeWidth={3} />
-					{/if}
-
-					{#each pathSegments as segment, i}
-						<span class={i === pathSegments.length - 1 ? 'text-bkpm-blue truncate max-w-[300px]' : 'text-slate-400'}>
-							{#if i === 1 && pathSegments[0].toLowerCase() === 'project' && page.data.project?.nama}
+						<span class={i === displaySegments.length - 1 ? 'text-bkpm-blue truncate max-w-[300px]' : 'text-slate-400'}>
+							{#if segment === 'regions'}
+								{m.nav_regions()}
+							{:else if segment === 'compare'}
+								{m.nav_compare()}
+							{:else if segment === 'policies'}
+								{m.nav_policies()}
+							{:else if segment === 'wiki'}
+								{m.nav_wiki()}
+							{:else if segment === 'submit'}
+								{m.nav_submit()}
+							{:else if segment === 'project' && i === displaySegments.length - 2 && page.data.project?.nama}
+								{m.nav_projects()}
+							{:else if i === displaySegments.length - 1 && displaySegments[i-1] === 'project' && page.data.project?.nama}
 								{page.data.project.nama}
 							{:else}
 								{segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ')}
 							{/if}
 						</span>
-						{#if i < pathSegments.length - 1}
-							<ChevronRight size={12} class="mx-1.5 text-slate-300" strokeWidth={3} />
-						{/if}
 					{/each}
 				</div>
 			</div>
@@ -355,10 +358,10 @@
 					>
 						<div class="flex flex-col items-end">
 							<span class="text-xs font-black text-bkpm-blue group-hover:text-logo-green transition-colors">
-								{isAuthenticated ? (user?.name || 'Investor') : m.nav_guest()}
+								{isAuthenticated ? (user?.name || m.auth_default_user()) : m.nav_guest()}
 							</span>
 							<span class="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">
-								{isAuthenticated ? 'Authenticated' : 'Public Access'}
+								{isAuthenticated ? m.auth_authenticated() : m.auth_public()}
 							</span>
 						</div>
 						<div class="h-9 w-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 group-hover:border-bkpm-blue/20 group-hover:bg-bkpm-blue/5 group-hover:text-bkpm-blue transition-all">
@@ -381,7 +384,7 @@
 									<div class="p-1.5 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-bkpm-blue/10 group-hover:text-bkpm-blue transition-colors">
 										<User size={14} strokeWidth={2.5} />
 									</div>
-									<span class="text-xs font-bold text-slate-600">Profile Details</span>
+									<span class="text-xs font-bold text-slate-600">{m.profile_details()}</span>
 								</a>
 
 								<div class="h-[1px] bg-slate-50 my-2 mx-5"></div>
@@ -391,8 +394,8 @@
 									<!-- Follow Language Currency -->
 									<div class="flex items-center justify-between mb-4">
 										<div class="flex flex-col">
-											<span class="text-[11px] font-black text-slate-700">Auto-Currency</span>
-											<span class="text-[9px] font-medium text-slate-400">Match currency to locale</span>
+											<span class="text-[11px] font-black text-slate-700">{m.settings_currency_title()}</span>
+											<span class="text-[9px] font-medium text-slate-400">{m.settings_currency_desc()}</span>
 										</div>
 										<button 
 											onclick={() => settingsStore.followLanguageCurrency = !settingsStore.followLanguageCurrency}
@@ -406,8 +409,8 @@
 									<!-- Disable Personalization -->
 									<div class="flex items-center justify-between">
 										<div class="flex flex-col">
-											<span class="text-[11px] font-black text-slate-700">Privacy Mode</span>
-											<span class="text-[9px] font-medium text-slate-400">Disable personalization</span>
+											<span class="text-[11px] font-black text-slate-700">{m.settings_privacy_title()}</span>
+											<span class="text-[9px] font-medium text-slate-400">{m.settings_privacy_desc()}</span>
 										</div>
 										<button 
 											onclick={() => settingsStore.disablePersonalization = !settingsStore.disablePersonalization}

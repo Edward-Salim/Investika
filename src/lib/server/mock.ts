@@ -35,6 +35,23 @@ const NAMES = [
     'Hendra Kurniawan'
 ];
 
+export function enrichInfraWithMockData(item: any, province: any) {
+    if (!item) return item;
+    
+    // If coordinates are missing, generate them near the province center
+    if (!item.lat || !item.lon) {
+        const seed = Number(item.id) || 0;
+        // Jitter within +/- 0.5 degrees
+        const latJitter = (seed % 100) / 100 - 0.5;
+        const lonJitter = (seed % 100) / 100 - 0.5;
+        
+        item.lat = (province?.lat || -6.2) + latJitter;
+        item.lon = (province?.lon || 106.8) + lonJitter;
+    }
+    
+    return item;
+}
+
 export function enrichProjectWithMockData(project: any) {
     if (!project) return project;
 
@@ -189,10 +206,10 @@ export function getMockProjects(count: number = 6) {
 
 export function getMockProvinces() {
     return [
-        { id_adm_provinsi: 1, nama: 'DKI Jakarta', wilayah_group: 'wilayah indonesia bagian barat' },
-        { id_adm_provinsi: 2, nama: 'Jawa Barat', wilayah_group: 'wilayah indonesia bagian barat' },
-        { id_adm_provinsi: 3, nama: 'Jawa Timur', wilayah_group: 'wilayah indonesia bagian barat' },
-        { id_adm_provinsi: 4, nama: 'Bali', wilayah_group: 'wilayah indonesia bagian tengah' },
-        { id_adm_provinsi: 5, nama: 'Kalimantan Timur', wilayah_group: 'wilayah indonesia bagian tengah' }
+        { id_adm_provinsi: 1, nama: 'DKI Jakarta', wilayah_group: 'wilayah indonesia bagian barat', lon: 106.8456, lat: -6.2088 },
+        { id_adm_provinsi: 2, nama: 'Jawa Barat', wilayah_group: 'wilayah indonesia bagian barat', lon: 107.6098, lat: -6.9147 },
+        { id_adm_provinsi: 3, nama: 'Jawa Timur', wilayah_group: 'wilayah indonesia bagian barat', lon: 112.7521, lat: -7.2575 },
+        { id_adm_provinsi: 4, nama: 'Bali', wilayah_group: 'wilayah indonesia bagian tengah', lon: 115.0920, lat: -8.3405 },
+        { id_adm_provinsi: 5, nama: 'Kalimantan Timur', wilayah_group: 'wilayah indonesia bagian tengah', lon: 117.1536, lat: -0.5022 }
     ];
 }

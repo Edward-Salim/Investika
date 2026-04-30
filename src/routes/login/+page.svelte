@@ -27,6 +27,10 @@
 
 	function handleLogin(e: Event) {
 		e.preventDefault();
+		enterGuestMode();
+	}
+
+	function enterGuestMode() {
 		isLoading = true;
 		
 		// Set a mock cookie for prototype persistence across refreshes
@@ -213,23 +217,31 @@
 						<label for="remember" class="text-xs font-bold text-slate-500 cursor-pointer select-none group-hover:text-slate-700 transition-colors">{m.login_remember()}</label>
 					</div>
 
-					<button 
-						type="submit" 
-						class="w-full relative py-4 mt-4 bg-bkpm-blue text-white rounded-xl font-black uppercase text-xs tracking-wide shadow-xl shadow-bkpm-blue/30 hover:bg-bkpm-blue/90 hover:-translate-y-0.5 transition-all overflow-hidden cursor-pointer"
-						disabled={isLoading}
-					>
-						{#if isLoading}
-							<div class="flex items-center justify-center space-x-2" in:fade>
-								<Loader2 size={16} class="animate-spin" />
-								<span>{m.login_btn_loading()}</span>
-							</div>
-						{:else}
-							<div class="flex items-center justify-center space-x-2" in:fade>
-								<span>{m.login_btn_submit()}</span>
-								<ArrowRight size={16} strokeWidth={3} />
-							</div>
-						{/if}
-					</button>
+					<div class="flex gap-3 pt-4">
+						<button 
+							type="button"
+							onclick={enterGuestMode}
+							class="flex-1 py-4 bg-white border-2 border-slate-100 text-slate-400 rounded-xl font-black uppercase text-[10px] tracking-widest hover:border-bkpm-blue/20 hover:text-bkpm-blue transition-all cursor-pointer"
+						>
+							Guest Access
+						</button>
+						<button 
+							type="submit" 
+							class="flex-[2] relative py-4 bg-bkpm-blue text-white rounded-xl font-black uppercase text-xs tracking-wide shadow-xl shadow-bkpm-blue/30 hover:bg-bkpm-blue/90 hover:-translate-y-0.5 transition-all overflow-hidden cursor-pointer"
+							disabled={isLoading}
+						>
+							{#if isLoading}
+								<div class="flex items-center justify-center space-x-2" in:fade>
+									<Loader2 size={16} class="animate-spin" />
+								</div>
+							{:else}
+								<div class="flex items-center justify-center space-x-2" in:fade>
+									<span>{m.login_btn_submit()}</span>
+									<ArrowRight size={16} strokeWidth={3} />
+								</div>
+							{/if}
+						</button>
+					</div>
 				</form>
 
 				<div class="mt-4 flex items-center justify-center space-x-2">

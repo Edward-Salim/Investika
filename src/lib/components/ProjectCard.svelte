@@ -3,6 +3,8 @@
 	import { compareStore } from '$lib/state/compare.svelte';
 	import { fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
+	import * as m from '$lib/paraglide/messages';
+	import { formatCurrency } from '$lib/utils/currency';
 
 	let { project, hideLocation = false } = $props<{
 		project: {
@@ -45,7 +47,8 @@
 		'Fisheries': Waves
 	};
 
-	const capexDisplay = $derived(project.investment || (project.capex ? `Rp ${new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(Number(project.capex.replace(/[^0-9]/g, '') || 0))}` : 'TBD'));
+	const capexDisplay = $derived(formatCurrency(project.capex || project.investment));
+	const npvDisplay = $derived(formatCurrency(project.npv));
 
 	const isCompared = $derived(compareStore.isCompared(project.id));
 </script>
@@ -67,7 +70,7 @@
 		{:else}
 			<div class="flex flex-col items-center gap-2 text-slate-300">
 				<Image size={24} strokeWidth={1.5} />
-				<span class="text-[8px] font-black uppercase tracking-widest">No Preview</span>
+				<span class="text-[8px] font-black uppercase tracking-widest">{m.card_no_preview()}</span>
 			</div>
 		{/if}
 
@@ -78,11 +81,15 @@
 		<div class="absolute top-3 right-3 z-10 flex items-center gap-1.5">
 			{#if project.status}
 				<div class="h-7 px-2.5 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md border border-white/20 shadow-sm">
-					<span class="text-[8px] font-black text-bkpm-blue uppercase tracking-tight">{project.status}</span>
+					<span class="text-[8px] font-black text-bkpm-blue uppercase tracking-tight">
+						{project.status}
+					</span>
 				</div>
 			{/if}
 			{#if project.category}
-				<div class="h-7 w-7 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md border border-white/20 shadow-sm" title={project.category}>
+				{@const catKey = 'cat_' + project.category.toLowerCase()}
+				<div class="h-7 w-7 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-md border border-white/20 shadow-sm" 
+					 title={(m as any)[catKey] ? (m as any)[catKey]() : project.category}>
 					{#if categoryIcons[project.category]}
 						{@const Icon = categoryIcons[project.category]}
 						<Icon size={13} strokeWidth={2.5} class="text-bkpm-blue" />
@@ -104,7 +111,7 @@
 				compareStore.toggle(project); 
 			}}
 			class="absolute bottom-4 left-0 z-20 flex flex-col items-center transition-all duration-300 group/bm cursor-pointer"
-			title={isCompared ? 'Remove from Compare' : compareStore.limitReached ? 'Max 3 — remove one first' : 'Add to Compare'}
+			title={isCompared ? m.card_tooltip_remove() : compareStore.limitReached ? m.card_tooltip_max() : m.card_tooltip_add()}
 			role="button"
 			tabindex="0"
 		>
@@ -126,29 +133,26 @@
 				"
 			>
 				{#if isCompared}
-					✓ Added &nbsp;<span class="opacity-60">{compareStore.projects.length}/3</span>
+					{m.card_added()} &nbsp;<span class="opacity-60">{compareStore.projects.length}/3</span>
 				{:else if compareStore.limitReached}
-					Max 3
+					{m.card_max()}
 				{:else}
-					+ Compare
+					{m.card_compare()}
 				{/if}
 			</div>
 		</div>
 	</div>
 
 	<div class="p-4 flex flex-col flex-1">
-		<h3 class="text-base font-black text-slate-900 leading-tight mb-1 group-hover:text-bkpm-blue transition-colors line-clamp-2">
+		<h3 class="text-base font-black text-slate-900 leading-tight mb-1 group-hover:text-bkpm-blue transition-colors line-clamp-2" title={project.title}>
 			{project.title}
 		</h3>
 
 		{#if !hideLocation && project.location}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<span 
 				onclick={(e) => { 
 					e.preventDefault(); 
 					e.stopPropagation(); 
-					e.stopImmediatePropagation();
 					if (project.provinceId) {
 						goto(`/regions?id=${project.provinceId}`);
 					}
@@ -164,19 +168,19 @@
 
 		<div class="grid grid-cols-3 gap-2 pt-3 border-t border-slate-50 mt-auto">
 			<div>
-				<div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">CAPEX</div>
-				<div class="text-xs font-black text-slate-900 truncate" title={capexDisplay}>
+				<div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{m.card_label_capex()}</div>
+				<div class="text-[10px] font-black text-slate-900 truncate" title={capexDisplay}>
 					{capexDisplay}
 				</div>
 			</div>
 			<div>
-				<div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">NPV</div>
-				<div class="text-[10px] font-black text-slate-900 truncate" title={project.npv}>
-					{project.npv}
+				<div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{m.card_label_npv()}</div>
+				<div class="text-[10px] font-black text-slate-900 truncate" title={npvDisplay}>
+					{npvDisplay}
 				</div>
 			</div>
 			<div>
-				<div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">IRR</div>
+				<div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{m.card_label_irr()}</div>
 				<div class="text-[10px] font-black text-logo-green truncate" title={project.irr}>{project.irr}</div>
 			</div>
 		</div>

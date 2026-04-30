@@ -11,9 +11,10 @@
 	import type { PageData } from './$types';
 	import { compareStore } from '$lib/state/compare.svelte';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
+	import vestiAIAsk from '$lib/assets/logos/vestiAI-ask.png';
 
 	let { data } = $props<{ data: PageData }>();
-	
+
 	// Project Images
 	import surabayaPortImg from '$lib/assets/projects/surabaya-port.png';
 	import floresGeothermalImg from '$lib/assets/projects/flores-geothermal.png';
@@ -26,7 +27,7 @@
 	let isFilterOpen = $state(searchStore.isFilterOpen);
 	let isSectorDropdownOpen = $state(false);
 	let committedSearch = $state(searchStore.committedSearch);
-	
+
 	let collapseTimeout: ReturnType<typeof setTimeout>;
 	let displayedProjects = $state<PageData['projects']>([]);
 
@@ -69,7 +70,7 @@
 		if (!settingsStore.followLanguageCurrency) {
 			return `$${usdMillions.toLocaleString()}M`;
 		}
-		
+
 		const lang = getLocale();
 		switch (lang) {
 			case 'id':
@@ -111,7 +112,7 @@
 		searchStore.riskProfile = riskProfile;
 		searchStore.sortBy = sortBy;
 		searchStore.committedSearch = committedSearch;
-	}); 
+	});
 
 	function resetSearch() {
 		displayedProjects = data.projects;
@@ -180,9 +181,9 @@
 		{ id: 'Preliminary', label: m.filter_preliminary() }
 	];
 	const regionOptions = [
-		{ id: 'wilayah indonesia bagian barat', label: 'Barat' },
-		{ id: 'wilayah indonesia bagian tengah', label: 'Tengah' },
-		{ id: 'wilayah indonesia bagian timur', label: 'Timur' }
+		{ id: 'wilayah indonesia bagian barat', label: m.reg_filter_west() },
+		{ id: 'wilayah indonesia bagian tengah', label: m.reg_filter_central() },
+		{ id: 'wilayah indonesia bagian timur', label: m.reg_filter_east() }
 	];
 
 	function toggleStatus(s: string) {
@@ -253,19 +254,19 @@
 	const filteredProjects = $derived(
 		allProjects
 			.filter((p: any) => {
-				const matchesSearch = !committedSearch || 
+				const matchesSearch = !committedSearch ||
 					p.title.toLowerCase().includes(committedSearch.toLowerCase()) ||
 					p.category.toLowerCase().includes(committedSearch.toLowerCase()) ||
 					p.location.toLowerCase().includes(committedSearch.toLowerCase());
-				
+
 				const matchesCategory = activeFilter === 'All' || p.category === activeFilter;
-				
+
 				const matchesInvestment = p.investmentNum >= minInvestment && p.investmentNum <= maxInvestment;
 				const matchesIRR = p.irrNum >= minIRR && p.irrNum <= maxIRR;
-				
+
 				const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(p.status);
 				const matchesRegion = selectedRegions.length === 0 || (p.wilayah && selectedRegions.includes(p.wilayah));
-				
+
 				return matchesSearch && matchesCategory && matchesInvestment && matchesIRR && matchesStatus && matchesRegion;
 			})
 			.sort((a: any, b: any) => {
@@ -348,11 +349,11 @@
 			displayedProjects = Array.isArray(payload.projects) ? payload.projects : [];
 			aiSummary = typeof payload.summary === 'string' && payload.summary.trim()
 				? payload.summary.trim()
-				: `I found ${displayedProjects.length} projects matching your query.`;
+				: m.home_ai_results_count({ count: displayedProjects.length });
 			inputValue = '';
 		} catch {
 			displayedProjects = data.projects;
-			aiSummary = `I couldn't complete that AI search right now, so I'm still showing the current project list.`;
+			aiSummary = m.home_ai_search_error();
 		} finally {
 			if (collapseTimeout) clearTimeout(collapseTimeout);
 			collapseTimeout = setTimeout(() => {
@@ -405,7 +406,7 @@
 			<div class="mb-4 flex justify-center">
 				<img
 					src={bkpmEmblem}
-					alt="BKPM Emblem"
+					alt="BKPM"
 					class="h-24 w-auto transition-transform hover:scale-105"
 				/>
 			</div>
@@ -422,7 +423,7 @@
 			<!-- Gradient border wrapper -->
 			<div class="gradient-border-wrap rounded-3xl p-[3px]">
 				<div class="flex items-center rounded-[21px] bg-white p-1 shadow-2xl shadow-slate-200/50 transition-all">
-					<button type="button" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0" title="Attach File"><Paperclip size={18} strokeWidth={2.5} /></button><textarea
+					<button type="button" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0" title={m.home_attach_file()}><Paperclip size={18} strokeWidth={2.5} /></button><textarea
 						use:autosize
 						bind:value={inputValue}
 						onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSearch())}
@@ -444,13 +445,13 @@
 
 			<!-- AI hint -->
 			<p class="mt-4 text-xs font-medium text-slate-400 text-center">
-				AI auto-filters projects based on your query.
+				{m.home_hint_ai()}
 				<button
 					type="button"
 					onclick={openCatalogView}
 					class="ml-2 inline-flex cursor-pointer items-center gap-1 font-semibold text-bkpm-blue transition-colors hover:text-logo-green"
 				>
-					Browse catalog
+					{m.home_hint_browse()}
 					<ArrowRight size={12} strokeWidth={3} />
 				</button>
 			</p>
@@ -477,10 +478,10 @@
 							class="group flex h-11 items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm shadow-slate-200/60 transition-all hover:border-bkpm-blue/40 cursor-pointer"
 						>
 							<activeDef.icon size={16} strokeWidth={2.5} class="transition-colors
-								{activeDef.tier === 'Primer' ? 'text-emerald-500 group-hover:text-emerald-600' : 
-								 activeDef.tier === 'Sekunder' ? 'text-amber-500 group-hover:text-amber-600' : 
+								{activeDef.tier === 'Primer' ? 'text-emerald-500 group-hover:text-emerald-600' :
+								 activeDef.tier === 'Sekunder' ? 'text-amber-500 group-hover:text-amber-600' :
 								 activeDef.name === 'All' ? 'text-slate-400 group-hover:text-bkpm-blue' :
-								 'text-bkpm-blue group-hover:text-bkpm-blue'}" 
+								 'text-bkpm-blue group-hover:text-bkpm-blue'}"
 							/>
 							<span class="text-slate-700 group-hover:text-slate-900">{activeDef.label}</span>
 							<ChevronDown size={14} class="ml-1 text-slate-400 transition-transform {isSectorDropdownOpen ? 'rotate-180' : ''}" />
@@ -490,12 +491,12 @@
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div class="fixed inset-0 z-40" onclick={() => isSectorDropdownOpen = false}></div>
-							<div 
+							<div
 								class="absolute left-0 top-full z-50 mt-2 w-64 overflow-y-auto rounded-2xl border border-slate-100 bg-white py-2 shadow-2xl"
 								style="max-height: min(24rem, calc(100vh - 18rem));"
 								transition:slide={{ duration: 200, easing: cubicOut }}
 							>
-								<button 
+								<button
 									onclick={() => { activeFilter = 'All'; isSectorDropdownOpen = false; }}
 									class="w-full text-left px-5 py-2.5 hover:bg-slate-50 flex items-center justify-between transition-colors {activeFilter === 'All' ? 'bg-slate-50' : ''}"
 								>
@@ -536,10 +537,10 @@
 					<!-- Simple Search Bar -->
 					<div class="relative w-full max-w-sm">
 						<Search size={14} class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-						<input 
-							type="text" 
+						<input
+							type="text"
 							bind:value={committedSearch}
-							placeholder="Search project..."
+							placeholder={m.search_placeholder()}
 							class="h-11 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 text-xs font-bold text-slate-700 shadow-sm shadow-slate-200/60 transition-all placeholder:text-slate-400 focus:outline-none focus:border-bkpm-blue/40 focus:ring-4 focus:ring-bkpm-blue/5"
 						/>
 					</div>
@@ -547,7 +548,7 @@
 
 				<!-- Global Reset Button -->
 
-	
+
 				<div class="flex items-center gap-2 shrink-0">
 					<span class="px-1 text-xs font-black text-slate-500">
 						{m.filter_projects_count({ count: filteredProjects.length })}
@@ -565,7 +566,7 @@
 						{/if}
 					</button>
 
-					<button 
+					<button
 						onclick={clearAll}
 						class="group flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-200/60 transition-all hover:border-bkpm-blue/40 hover:text-bkpm-blue cursor-pointer"
 						title={m.filter_reset()}
@@ -585,7 +586,7 @@
 			{/if}
 		</div>
 		{#if isFilterOpen}
-			<div 
+			<div
 				class="bg-white border border-slate-100 rounded-2xl p-5 mb-6 shadow-sm max-w-[1400px] mx-auto"
 				transition:slide={{ duration: 300, easing: cubicOut }}
 			>
@@ -620,11 +621,11 @@
 						<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">{m.filter_status()}</span>
 						<div class="flex flex-wrap gap-2">
 							{#each statusOptions as s}
-								<button 
+								<button
 									onclick={() => toggleStatus(s.id)}
 									class="px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all border cursor-pointer
-										{selectedStatuses.includes(s.id) 
-											? 'bg-logo-green/10 text-logo-green border-logo-green/20' 
+										{selectedStatuses.includes(s.id)
+											? 'bg-logo-green/10 text-logo-green border-logo-green/20'
 											: 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}"
 								>
 									{s.label}
@@ -638,11 +639,11 @@
 						<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">{m.filter_region()}</span>
 						<div class="flex flex-wrap gap-2">
 							{#each regionOptions as r}
-								<button 
+								<button
 									onclick={() => toggleRegion(r.id)}
 									class="px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all border cursor-pointer
-										{selectedRegions.includes(r.id) 
-											? 'bg-bkpm-blue/10 text-bkpm-blue border-bkpm-blue/20' 
+										{selectedRegions.includes(r.id)
+											? 'bg-bkpm-blue/10 text-bkpm-blue border-bkpm-blue/20'
 											: 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}"
 								>
 									{r.label}
@@ -658,13 +659,13 @@
 							<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{m.filter_irr()} ({minIRR}% - {maxIRR}%)</span>
 						</div>
 						<div class="px-2">
-							<input 
-								type="range" 
-								min="0" 
-								max="30" 
+							<input
+								type="range"
+								min="0"
+								max="30"
 								step="1"
 								bind:value={minIRR}
-								class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-bkpm-blue" 
+								class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-bkpm-blue"
 							/>
 						</div>
 					</div>
@@ -681,10 +682,10 @@
 					<div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 mb-4">
 						<SlidersHorizontal size={24} class="text-slate-200" />
 					</div>
-					<h3 class="text-xl font-black text-slate-800 mb-2">No results found</h3>
-					<p class="text-slate-400 font-medium">Try adjusting your filters or presets.</p>
+					<h3 class="text-xl font-black text-slate-800 mb-2">{m.no_results_title()}</h3>
+					<p class="text-slate-400 font-medium">{m.no_results_desc()}</p>
 					<button onclick={resetSearch} class="mt-6 px-6 py-2 bg-bkpm-blue text-white rounded-xl font-black text-xs uppercase tracking-wide cursor-pointer hover:bg-bkpm-blue/90 transition-all">
-						Clear All Filters
+						{m.btn_clear_filters()}
 					</button>
 				</div>
 			{/each}
@@ -698,41 +699,49 @@
 			<!-- AI Summary — slides in right above the bar -->
 			{#if aiSummary}
 				<div
-					class="rounded-2xl bg-white border border-bkpm-blue/20 px-5 py-4 shadow-lg shadow-bkpm-blue/5 relative overflow-hidden transition-all duration-300 {isAiSummaryExpanded ? '' : 'py-3'}"
+					class="rounded-2xl bg-white border border-bkpm-blue/20 px-4 py-2.5 shadow-lg shadow-bkpm-blue/5 relative overflow-hidden transition-all duration-300"
 					in:fly={{ y: 16, duration: 350, easing: cubicOut }}
 					out:fade={{ duration: 150 }}
 				>
-					<div class="flex items-center justify-between {isAiSummaryExpanded ? 'mb-2' : ''}">
-						<button 
-							type="button" 
-							class="flex items-center gap-2 cursor-pointer bg-transparent border-none p-0 text-left" 
-							onclick={() => isAiSummaryExpanded = !isAiSummaryExpanded}
-						>
-							<div class="h-6 w-6 rounded-md bg-bkpm-blue flex items-center justify-center shadow shadow-bkpm-blue/20">
-								<Bot size={14} strokeWidth={2.5} class="text-white" />
-							</div>
-							<span class="text-[11px] font-black text-bkpm-blue tracking-wide">VestiAI</span>
-							{#if !isAiSummaryExpanded}
-								<span class="text-[10px] font-bold text-slate-400 ml-2 truncate max-w-[200px] md:max-w-md hidden sm:inline-block">"{aiSummary}"</span>
-							{/if}
-						</button>
-						<div class="flex items-center gap-1">
-							<button onclick={() => isAiSummaryExpanded = !isAiSummaryExpanded} class="p-1 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-bkpm-blue transition-colors cursor-pointer">
+					<div class="flex items-start gap-6">
+						<!-- Mascot & Branding on Left -->
+						<div class="flex flex-col items-center shrink-0">
+							<button 
+								type="button" 
+								class="flex flex-col items-center gap-0 cursor-pointer bg-transparent border-none p-0" 
+								onclick={() => isAiSummaryExpanded = !isAiSummaryExpanded}
+							>
+								<img src={vestiAIAsk} alt="VestiAI" class="h-10 w-10 object-contain scale-125" />
+								<span class="text-[8px] font-black text-bkpm-blue tracking-tight mt-0.5">VestiAI</span>
+							</button>
+						</div>
+
+						<!-- Intelligence Content on Right -->
+						<div class="flex-1 min-w-0 pt-1.5">
+							<button 
+								onclick={() => isAiSummaryExpanded = !isAiSummaryExpanded} 
+								class="absolute top-2 right-2 p-1 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-bkpm-blue transition-colors cursor-pointer z-10"
+							>
 								{#if isAiSummaryExpanded}
 									<ChevronDown size={14} strokeWidth={3} />
 								{:else}
 									<ChevronUp size={14} strokeWidth={3} />
 								{/if}
 							</button>
+
+							{#if isAiSummaryExpanded}
+								<div transition:slide={{ duration: 200 }}>
+									<p class="text-xs font-semibold text-slate-700 leading-relaxed pr-6 break-words">
+										{m.home_ai_prefix()} <span class="text-bkpm-blue font-black">"{aiSummary}"</span>{m.home_ai_suffix()}
+									</p>
+								</div>
+							{:else}
+								<p class="text-[11px] font-bold text-slate-400 truncate max-w-sm md:max-w-xl">
+									"{aiSummary}"
+								</p>
+							{/if}
 						</div>
 					</div>
-					{#if isAiSummaryExpanded}
-						<div transition:slide={{ duration: 200 }}>
-							<p class="text-sm font-semibold text-slate-700 leading-relaxed pr-6 break-words overflow-hidden">
-								{m.home_ai_prefix()} <span class="text-bkpm-blue font-black break-all">"{aiSummary}"</span>{m.home_ai_suffix()}
-							</p>
-						</div>
-					{/if}
 				</div>
 			{/if}
 
@@ -741,7 +750,7 @@
 				<button onclick={resetSearch} aria-label="Reset Search" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0">
 					<Home size={18} strokeWidth={2.5} />
 				</button>
-				<button type="button" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0" title="Attach File"><Paperclip size={18} strokeWidth={2.5} /></button><textarea
+				<button type="button" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0" title={m.home_attach_file()}><Paperclip size={18} strokeWidth={2.5} /></button><textarea
 					use:autosize
 					bind:value={inputValue}
 					onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSearch())}

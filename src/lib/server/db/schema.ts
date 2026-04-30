@@ -210,7 +210,9 @@ export const regionalInfrastructureItems = pgTable('regional_infrastructure_item
 	id_adm_kabkot: integer('id_adm_kabkot').references(() => admRegencies.id_adm_kabkot),
 	nama: text('nama'),
 	kategori: text('kategori'),
-	jenis: text('jenis')
+	jenis: text('jenis'),
+	lat: doublePrecision('lat'),
+	lon: doublePrecision('lon')
 });
 
 export const regionalInvestmentBySector = pgTable('regional_investment_by_sector', {

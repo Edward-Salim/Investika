@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import * as m from '$lib/paraglide/messages.js';
 
 	interface Column {
 		key: string;
@@ -70,7 +71,7 @@
 				{:else}
 					<tr>
 						<td colspan={columns.length} class="py-12 text-center text-xs text-slate-400 font-medium italic">
-							No records available
+							{(m as any).table_no_records()}
 						</td>
 					</tr>
 				{/each}
@@ -82,7 +83,7 @@
 	{#if pagination.totalPages > 1}
 		<div class="flex items-center justify-between px-8 py-4 border-t border-slate-100 bg-slate-50/30">
 			<span class="text-xs text-slate-400">
-				Total <span class="font-semibold text-slate-600">{pagination.total}</span>
+				{(m as any).table_total()} <span class="font-semibold text-slate-600">{pagination.total}</span>
 			</span>
 			<div class="flex items-center gap-2">
 				<button
@@ -91,7 +92,7 @@
 					class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all {currentPage === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}"
 				>
 					<ChevronLeft size={14} />
-					Prev
+					{(m as any).table_prev()}
 				</button>
 				<span class="text-xs font-semibold text-slate-500 px-2">{currentPage + 1} / {pagination.totalPages}</span>
 				<button
@@ -99,7 +100,7 @@
 					disabled={currentPage >= pagination.totalPages - 1}
 					class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all {currentPage >= pagination.totalPages - 1 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}"
 				>
-					Next
+					{(m as any).table_next()}
 					<ChevronRight size={14} />
 				</button>
 			</div>

@@ -46,51 +46,58 @@
 	]);
 
 	const currencies = [
-		{ code: 'USD', symbol: '$', name: 'US Dollar' },
-		{ code: 'IDR', symbol: 'Rp', name: 'Indonesian Rupiah' },
-		{ code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
-		{ code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
-		{ code: 'KRW', symbol: '₩', name: 'Korean Won' },
-		{ code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' }
+		{ code: 'USD', symbol: '$', name: m.onb_cur_usd() },
+		{ code: 'IDR', symbol: 'Rp', name: m.onb_cur_idr() },
+		{ code: 'CNY', symbol: '¥', name: m.onb_cur_cny() },
+		{ code: 'JPY', symbol: '¥', name: m.onb_cur_jpy() },
+		{ code: 'KRW', symbol: '₩', name: m.onb_cur_krw() },
+		{ code: 'SGD', symbol: 'S$', name: m.onb_cur_sgd() }
 	];
 
 	const scales = $derived.by(() => {
 		const s = currencies.find(c => c.code === currency)?.symbol || '$';
+		const scaleConfigs = [
+			{ id: 'small', desc: m.onb_scale_small_desc() },
+			{ id: 'medium', desc: m.onb_scale_medium_desc() },
+			{ id: 'large', desc: m.onb_scale_large_desc() },
+			{ id: 'mega', desc: m.onb_scale_mega_desc() }
+		];
+
 		if (currency === 'USD') return [
-			{ id: 'small', label: `< ${s}10M`, description: 'Early-stage or localized projects' },
-			{ id: 'medium', label: `${s}10M - ${s}100M`, description: 'Regional development scale' },
-			{ id: 'large', label: `${s}100M - ${s}1B`, description: 'Major infrastructure & industry' },
-			{ id: 'mega', label: `${s}1B+`, description: 'National strategic megaprojects' }
+			{ id: 'small', label: `< ${s}10M`, description: scaleConfigs[0].desc },
+			{ id: 'medium', label: `${s}10M - ${s}100M`, description: scaleConfigs[1].desc },
+			{ id: 'large', label: `${s}100M - ${s}1B`, description: scaleConfigs[2].desc },
+			{ id: 'mega', label: `${s}1B+`, description: scaleConfigs[3].desc }
 		];
 		if (currency === 'IDR') return [
-			{ id: 'small', label: `< ${s}150B`, description: 'Early-stage or localized projects' },
-			{ id: 'medium', label: `${s}150B - ${s}1.5T`, description: 'Regional development scale' },
-			{ id: 'large', label: `${s}1.5T - ${s}15T`, description: 'Major infrastructure & industry' },
-			{ id: 'mega', label: `${s}15T+`, description: 'National strategic megaprojects' }
+			{ id: 'small', label: `< ${s}150B`, description: scaleConfigs[0].desc },
+			{ id: 'medium', label: `${s}150B - ${s}1.5T`, description: scaleConfigs[1].desc },
+			{ id: 'large', label: `${s}1.5T - ${s}15T`, description: scaleConfigs[2].desc },
+			{ id: 'mega', label: `${s}15T+`, description: scaleConfigs[3].desc }
 		];
 		if (currency === 'CNY') return [
-			{ id: 'small', label: `< ${s}70M`, description: 'Early-stage or localized projects' },
-			{ id: 'medium', label: `${s}70M - ${s}700M`, description: 'Regional development scale' },
-			{ id: 'large', label: `${s}700M - ${s}7B`, description: 'Major infrastructure & industry' },
-			{ id: 'mega', label: `${s}7B+`, description: 'National strategic megaprojects' }
+			{ id: 'small', label: `< ${s}70M`, description: scaleConfigs[0].desc },
+			{ id: 'medium', label: `${s}70M - ${s}700M`, description: scaleConfigs[1].desc },
+			{ id: 'large', label: `${s}700M - ${s}7B`, description: scaleConfigs[2].desc },
+			{ id: 'mega', label: `${s}7B+`, description: scaleConfigs[3].desc }
 		];
 		if (currency === 'JPY') return [
-			{ id: 'small', label: `< ${s}1.5B`, description: 'Early-stage or localized projects' },
-			{ id: 'medium', label: `${s}1.5B - ${s}15B`, description: 'Regional development scale' },
-			{ id: 'large', label: `${s}15B - ${s}150B`, description: 'Major infrastructure & industry' },
-			{ id: 'mega', label: `${s}150B+`, description: 'National strategic megaprojects' }
+			{ id: 'small', label: `< ${s}1.5B`, description: scaleConfigs[0].desc },
+			{ id: 'medium', label: `${s}1.5B - ${s}15B`, description: scaleConfigs[1].desc },
+			{ id: 'large', label: `${s}15B - ${s}150B`, description: scaleConfigs[2].desc },
+			{ id: 'mega', label: `${s}150B+`, description: scaleConfigs[3].desc }
 		];
 		if (currency === 'KRW') return [
-			{ id: 'small', label: `< ${s}13B`, description: 'Early-stage or localized projects' },
-			{ id: 'medium', label: `${s}13B - ${s}130B`, description: 'Regional development scale' },
-			{ id: 'large', label: `${s}130B - ${s}1.3T`, description: 'Major infrastructure & industry' },
-			{ id: 'mega', label: `${s}1.3T+`, description: 'National strategic megaprojects' }
+			{ id: 'small', label: `< ${s}13B`, description: scaleConfigs[0].desc },
+			{ id: 'medium', label: `${s}13B - ${s}130B`, description: scaleConfigs[1].desc },
+			{ id: 'large', label: `${s}130B - ${s}1.3T`, description: scaleConfigs[2].desc },
+			{ id: 'mega', label: `${s}1.3T+`, description: scaleConfigs[3].desc }
 		];
 		if (currency === 'SGD') return [
-			{ id: 'small', label: `< ${s}13M`, description: 'Early-stage or localized projects' },
-			{ id: 'medium', label: `${s}13M - ${s}130M`, description: 'Regional development scale' },
-			{ id: 'large', label: `${s}130M - ${s}1.3B`, description: 'Major infrastructure & industry' },
-			{ id: 'mega', label: `${s}1.3B+`, description: 'National strategic megaprojects' }
+			{ id: 'small', label: `< ${s}13M`, description: scaleConfigs[0].desc },
+			{ id: 'medium', label: `${s}13M - ${s}130M`, description: scaleConfigs[1].desc },
+			{ id: 'large', label: `${s}130M - ${s}1.3B`, description: scaleConfigs[2].desc },
+			{ id: 'mega', label: `${s}1.3B+`, description: scaleConfigs[3].desc }
 		];
 		return [];
 	});

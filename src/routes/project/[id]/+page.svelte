@@ -21,20 +21,13 @@
 	import { fade } from 'svelte/transition';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
+	import { formatCurrency } from '$lib/utils/currency';
 
 	let { data } = $props<{ data: PageData }>();
 	let project = $derived(data.project);
 
-	// Helper for currency formatting
-	const formatCurrency = (amount: string | number | null, currency: string | null) => {
-		if (!amount) return 'TBD';
-		const val = typeof amount === 'string' ? parseFloat(amount) : amount;
-		return new Intl.NumberFormat('en-US', {
-			style: 'currency',
-			currency: currency || 'USD',
-			maximumFractionDigits: 0
-		}).format(val);
-	};
+	// Helper for currency formatting (deprecated, now using shared utility)
+	const _formatCurrency = (amount: string | number | null) => formatCurrency(amount);
 
 	// Helper to encode URLs with spaces or special characters and proxy restricted ones
 	const safeUrl = (url: string | null) => {
@@ -136,7 +129,7 @@
 		{:else}
 			<div class="flex flex-col items-center gap-3 text-white/20">
 				<Image size={64} strokeWidth={1} />
-				<span class="text-xs font-black uppercase tracking-[0.2em]">No Project Preview</span>
+				<span class="text-xs font-black uppercase tracking-[0.2em]">{m.proj_no_preview()}</span>
 			</div>
 		{/if}
 		<div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
@@ -152,9 +145,24 @@
 				<div class="flex flex-wrap items-center gap-3 mb-6">
 					<!-- Sector Badge -->
 					{#if project.nama_sektor_peluang}
+						{@const sectorKey = project.nama_sektor_peluang.toLowerCase()}
 						<div class="h-8 px-3 flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
 							<Zap size={14} strokeWidth={3} class="text-white" />
-							<span class="text-[10px] font-black text-white uppercase tracking-widest">{project.nama_sektor_peluang}</span>
+							<span class="text-[10px] font-black text-white uppercase tracking-widest">
+								{#if sectorKey.includes('industri') || sectorKey.includes('manufacturing')}
+									{m.cat_manufacturing()}
+								{:else if sectorKey.includes('pariwisata') || sectorKey.includes('tourism')}
+									{m.cat_tourism()}
+								{:else if sectorKey.includes('perikanan') || sectorKey.includes('fisheries')}
+									{m.cat_fisheries()}
+								{:else if sectorKey.includes('infrastruktur') || sectorKey.includes('infrastructure')}
+									{m.cat_infrastructure()}
+								{:else if sectorKey.includes('energi') || sectorKey.includes('energy')}
+									{m.cat_energy()}
+								{:else}
+									{project.nama_sektor_peluang}
+								{/if}
+							</span>
 						</div>
 					{/if}
 					
@@ -164,7 +172,15 @@
 					</button>
 				</div>
 				<h1 class="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight mb-4 drop-shadow-2xl">
-					{project.nama}
+					{#if project.id_peluang === 928 || project.id === "928" || project.id_peluang === 1 || project.id === "1"}
+						{m.mock_p1_title()}
+					{:else if project.id_peluang === 933 || project.id === "933" || project.id_peluang === 2 || project.id === "2"}
+						{m.mock_p2_title()}
+					{:else if project.id_peluang === 866 || project.id === "866" || project.id_peluang === 3 || project.id === "3"}
+						{m.mock_p3_title()}
+					{:else}
+						{project.nama}
+					{/if}
 				</h1>
 			</div>
 		</div>
@@ -175,13 +191,21 @@
 		<div class="max-w-7xl mx-auto px-6 lg:px-8 py-8 md:py-10">
 			<div class="max-w-none">
 				<p class="text-sm font-medium text-slate-500 leading-relaxed italic border-l-4 border-bkpm-blue pl-6 {isExpanded ? '' : 'line-clamp-2'}">
-					{project.deskripsi || m.proj_dummy_desc()}
+					{#if project.id_peluang === 928 || project.id === "928" || project.id_peluang === 1 || project.id === "1"}
+						{m.mock_p1_desc()}
+					{:else if project.id_peluang === 933 || project.id === "933" || project.id_peluang === 2 || project.id === "2"}
+						{m.mock_p2_desc()}
+					{:else if project.id_peluang === 866 || project.id === "866" || project.id_peluang === 3 || project.id === "3"}
+						{m.mock_p3_desc()}
+					{:else}
+						{project.deskripsi || m.proj_dummy_desc()}
+					{/if}
 				</p>
 				<button 
 					onclick={() => isExpanded = !isExpanded}
 					class="mt-2 ml-6 text-[10px] font-black uppercase tracking-widest text-bkpm-blue hover:text-bkpm-blue/80 transition-colors cursor-pointer"
 				>
-					{isExpanded ? 'Show Less' : 'Read More'}
+					{isExpanded ? m.proj_read_less() : m.proj_read_more()}
 				</button>
 			</div>
 		</div>
@@ -194,7 +218,7 @@
 		<section class="mb-12">
 			<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
 				<Zap size={20} class="mr-2 text-bkpm-blue" />
-				Key Project Attributes
+				{m.proj_attr_title()}
 			</h3>
 			
 			<div class="bg-slate-100 rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -202,7 +226,7 @@
 					<!-- Scheme -->
 					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
 						<div class="flex items-center gap-2 mb-0.5">
-							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Business Scheme</span>
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">{m.proj_attr_scheme()}</span>
 						</div>
 						<span class="text-sm font-black text-slate-900">{project.details?.skema_kerja_sama || "TBD"}</span>
 					</div>
@@ -210,7 +234,7 @@
 					<!-- Land -->
 					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
 						<div class="flex items-center gap-2 mb-0.5">
-							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Land Area</span>
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">{m.proj_attr_land()}</span>
 						</div>
 						<span class="text-sm font-black text-slate-900">{project.details?.luas_lahan || "TBD"}</span>
 					</div>
@@ -218,7 +242,7 @@
 					<!-- Region -->
 					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
 						<div class="flex items-center gap-2 mb-0.5">
-							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Region</span>
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">{m.proj_attr_region()}</span>
 						</div>
 						<span class="text-sm font-black text-slate-900">
 							<a href="/regions?id={project.id_adm_provinsi}" class="hover:text-bkpm-blue transition-colors" title="{project.nama_kabkot || ''}, {project.nama_provinsi || ''}">
@@ -230,7 +254,7 @@
 					<!-- KBLI -->
 					<div class="bg-white p-6 flex flex-col gap-1.5 hover:bg-slate-50/50 transition-colors">
 						<div class="flex items-center gap-2 mb-0.5">
-							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">KBLI Code</span>
+							<span class="text-[10px] font-black uppercase tracking-wider text-slate-400">{m.proj_attr_kbli()}</span>
 						</div>
 						<span class="text-sm font-black text-slate-900">{project.details?.kode_kbli || "N/A"}</span>
 					</div>
@@ -268,7 +292,7 @@
 					<section>
 						<h3 class="text-2xl font-black text-slate-900 tracking-tight mb-8 flex items-center">
 							<TrendingUp size={24} class="mr-3 text-bkpm-blue" />
-							Project Readiness
+							{m.proj_ready_title()}
 						</h3>
 						
 						<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -276,7 +300,7 @@
 							<div class="relative bg-white rounded-2xl p-6 text-slate-900 border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between">
 								<div class="absolute -right-8 -top-8 w-24 h-24 bg-bkpm-blue/5 blur-2xl rounded-full"></div>
 								<div class="relative z-10 flex items-center justify-between mb-4">
-									<span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Current Phase</span>
+									<span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{m.proj_ready_phase()}</span>
 									<div class="h-2 w-2 rounded-full bg-logo-green animate-pulse"></div>
 								</div>
 								<div class="relative z-10 space-y-2 mt-auto">
@@ -285,7 +309,7 @@
 										<div class="h-full bg-bkpm-blue w-2/3 rounded-full"></div>
 									</div>
 									<p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-2">
-										Late-stage preparation phase
+										{m.proj_ready_phase_desc()}
 									</p>
 								</div>
 							</div>
@@ -294,15 +318,15 @@
 							<div class="relative bg-white rounded-2xl p-6 text-slate-900 border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between">
 								<div class="absolute -right-8 -top-8 w-24 h-24 bg-logo-green/5 blur-2xl rounded-full"></div>
 								<div class="relative z-10 mb-4">
-									<span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Investment Priority</span>
+									<span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{m.proj_ready_priority()}</span>
 								</div>
 								<div class="relative z-10 mt-auto">
 									<div class="inline-flex items-center px-2 py-1 mb-2 rounded-md bg-logo-green/10 border border-logo-green/20">
 										<CheckCircle2 size={10} class="text-logo-green mr-1.5" />
-										<span class="text-[9px] font-black text-logo-green uppercase tracking-widest">Priority High</span>
+										<span class="text-[9px] font-black text-logo-green uppercase tracking-widest">{m.proj_ready_priority_high()}</span>
 									</div>
 									<h4 class="text-[15px] font-black leading-tight text-slate-800">
-										{project.details?.is_ipro ? 'Investment Project Ready to Offer (IPRO)' : 'Strategic National Project'}
+										{project.details?.is_ipro ? m.proj_ready_ipro() : m.proj_ready_psn()}
 									</h4>
 								</div>
 							</div>
@@ -311,7 +335,7 @@
 							<div class="relative bg-white rounded-2xl p-6 text-slate-900 border border-slate-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between">
 								<div class="absolute -right-8 -top-8 w-24 h-24 bg-amber-500/5 blur-2xl rounded-full"></div>
 								<div class="relative z-10 mb-4">
-									<span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Economic Zone Status</span>
+									<span class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{m.proj_ready_zone()}</span>
 								</div>
 								<div class="relative z-10 mt-auto space-y-2">
 									<h4 class="text-[13px] font-black text-slate-800 leading-snug line-clamp-3">
@@ -324,7 +348,7 @@
 											</div>
 											<div class="w-5 h-5 rounded-full bg-logo-green border border-white"></div>
 										</div>
-										<p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Verified Special Zone</p>
+										<p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{m.proj_ready_verified()}</p>
 									</div>
 								</div>
 							</div>
@@ -336,7 +360,7 @@
 					<section>
 						<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
 							<ShieldCheck size={20} class="mr-2 text-bkpm-blue" />
-							Investment Incentives
+							{m.proj_sec_incentives()}
 						</h3>
 						<div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-8 space-y-6">
 							{#each project.incentives as incentive}
@@ -356,7 +380,7 @@
 					<section>
 						<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
 							<FileText size={20} class="mr-2 text-bkpm-blue" />
-							Additional Information
+							{m.proj_sec_info()}
 						</h3>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 							{#each documents as info}
@@ -367,7 +391,7 @@
 									{#if info.url_rest || (info.nama && info.nama.startsWith('http'))}
 										<a href={info.url_rest || info.nama} target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-xs font-bold text-bkpm-blue hover:text-bkpm-blue/80 uppercase tracking-widest transition-colors">
 											<Download size={14} class="mr-1.5" strokeWidth={3} />
-											View Document
+											{m.proj_doc_view()}
 										</a>
 									{/if}
 								</div>
@@ -384,7 +408,7 @@
 					<section>
 						<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
 							<Image size={20} class="mr-2 text-bkpm-blue" />
-							Project Galleries
+							{m.proj_sec_gallery()}
 						</h3>
 						
 						<div class="relative rounded-3xl overflow-hidden bg-slate-900 aspect-video md:aspect-[21/9] group shadow-sm border border-slate-200">
@@ -402,7 +426,7 @@
 							<button 
 								class="absolute left-4 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur-md transition-colors cursor-pointer border border-white/10 opacity-0 group-hover:opacity-100"
 								onclick={() => activeGallerySlide = (activeGallerySlide - 1 + galleryImages.length) % galleryImages.length}
-								aria-label="Previous gallery slide"
+								aria-label={m.aria_prev_slide()}
 							>
 								<ChevronLeft size={20} strokeWidth={2.5} />
 							</button>
@@ -410,7 +434,7 @@
 							<button 
 								class="absolute right-4 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur-md transition-colors cursor-pointer border border-white/10 opacity-0 group-hover:opacity-100"
 								onclick={() => activeGallerySlide = (activeGallerySlide + 1) % galleryImages.length}
-								aria-label="Next gallery slide"
+								aria-label={m.aria_next_slide()}
 							>
 								<ChevronRight size={20} strokeWidth={2.5} />
 							</button>
@@ -420,7 +444,7 @@
 									<button 
 										class="h-2 rounded-full transition-all duration-300 cursor-pointer {i === activeGallerySlide ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}"
 										onclick={() => activeGallerySlide = i}
-										aria-label="Go to gallery slide {i + 1}"
+										aria-label={m.aria_gallery_dot({ i: i + 1 })}
 									></button>
 								{/each}
 							</div>
@@ -433,7 +457,7 @@
 					<section>
 						<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
 							<Image size={20} class="mr-2 text-bkpm-blue" />
-							Project Infographics
+							{m.proj_sec_infographic()}
 						</h3>
 						
 						<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -464,7 +488,7 @@
 					{#if galleryImages.length === 0 && infographicImages.length === 0}
 					<div class="py-20 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
 						<Image size={48} strokeWidth={1} class="mx-auto text-slate-300 mb-4" />
-						<p class="text-slate-500 font-medium">No media available for this project.</p>
+						<p class="text-slate-500 font-medium">{m.proj_media_none()}</p>
 					</div>
 					{/if}
 				</div>
@@ -483,13 +507,13 @@
 							class="flex-1 cursor-pointer py-3 px-4 rounded-full text-[10px] font-black uppercase tracking-widest relative z-10 transition-colors {currentView === 'info' ? 'text-bkpm-blue' : 'text-slate-500 hover:text-slate-700'}"
 							onclick={() => currentView = 'info'}
 						>
-							Info View
+							{m.proj_view_info()}
 						</button>
 						<button 
 							class="flex-1 cursor-pointer py-3 px-4 rounded-full text-[10px] font-black uppercase tracking-widest relative z-10 transition-colors {currentView === 'gallery' ? 'text-bkpm-blue' : 'text-slate-500 hover:text-slate-700'}"
 							onclick={() => currentView = 'gallery'}
 						>
-							Gallery View
+							{m.proj_view_gallery()}
 						</button>
 					</div>
 					<div class="bg-white rounded-[32px] border border-slate-200 shadow-xl shadow-slate-200/50 p-8">
@@ -498,7 +522,7 @@
 						<div>
 							<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">{m.fact_capex()}</div>
 							<div class="text-3xl font-black text-slate-900 tracking-tight">
-								{project.nilai_investasi || 'TBD'}
+								{formatCurrency(project.nilai_investasi_amount || project.nilai_investasi)}
 							</div>
 						</div>
 
@@ -507,9 +531,9 @@
 						<!-- NPV -->
 						{#if project.nilai_npv}
 						<div>
-							<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Expected NPV</div>
+							<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">{m.proj_metric_npv()}</div>
 							<div class="text-xl font-black text-slate-800">
-								{project.nilai_npv}
+								{formatCurrency(project.nilai_npv_amount || project.nilai_npv)}
 							</div>
 						</div>
 						<div class="h-[1px] w-full bg-slate-100"></div>
@@ -523,14 +547,14 @@
 							</div>
 							<div>
 								<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">{m.fact_payback()}</div>
-								<div class="text-lg font-black text-slate-900">{project.nilai_pp ? project.nilai_pp + ' Years' : 'TBD'}</div>
+								<div class="text-lg font-black text-slate-900">{project.nilai_pp ? project.nilai_pp + ' ' + m.fact_years() : 'TBD'}</div>
 							</div>
 						</div>
 
 						{#if formattedLastUpdated}
 						<div class="h-[1px] w-full bg-slate-100"></div>
 						<div>
-							<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Last updated</div>
+							<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">{m.proj_last_updated()}</div>
 							<div class="text-sm font-black text-slate-800">{formattedLastUpdated}</div>
 						</div>
 						{/if}
@@ -541,7 +565,7 @@
 						<div class="h-[1px] w-full bg-slate-100 mt-8 mb-8"></div>
 						<div class="space-y-4">
 							<div class="flex items-center justify-between gap-3">
-								<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Project Contacts</div>
+								<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.proj_sec_contacts()}</div>
 								{#if contacts.length > 1}
 									<div class="flex items-center gap-2">
 										<span class="text-[10px] font-bold text-slate-400">{activeContactSlide + 1} / {contacts.length}</span>
@@ -550,7 +574,7 @@
 												type="button"
 												onclick={() => activeContactSlide = (activeContactSlide - 1 + contacts.length) % contacts.length}
 												class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-bkpm-blue/20 hover:text-bkpm-blue cursor-pointer"
-												aria-label="Previous contact"
+												aria-label={m.aria_prev_slide()}
 											>
 												<ChevronLeft size={14} strokeWidth={2.5} />
 											</button>
@@ -558,7 +582,7 @@
 												type="button"
 												onclick={() => activeContactSlide = (activeContactSlide + 1) % contacts.length}
 												class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-bkpm-blue/20 hover:text-bkpm-blue cursor-pointer"
-												aria-label="Next contact"
+												aria-label={m.aria_next_slide()}
 											>
 												<ChevronRight size={14} strokeWidth={2.5} />
 											</button>
@@ -572,13 +596,13 @@
 									<div class="space-y-2">
 										{#if activeContact.email}
 											<div class="text-[13px] flex items-start gap-2">
-												<span class="font-bold text-slate-400 w-12 shrink-0">Email:</span> 
+												<span class="font-bold text-slate-400 w-12 shrink-0">{m.proj_label_email()}</span> 
 												<span class="text-slate-600 break-all">{activeContact.email}</span>
 											</div>
 										{/if}
 										{#if activeContact.telepon}
 											<div class="text-[13px] flex items-start gap-2">
-												<span class="font-bold text-slate-400 w-12 shrink-0">Phone:</span> 
+												<span class="font-bold text-slate-400 w-12 shrink-0">{m.proj_label_phone()}</span> 
 												<span class="text-slate-600">{activeContact.telepon}</span>
 											</div>
 										{/if}
@@ -617,7 +641,7 @@
 		class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/90 p-6 cursor-zoom-out"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Expanded project infographic viewer"
+		aria-label={m.proj_sec_infographic()}
 		tabindex="0"
 		onclick={() => expandedInfographic = null}
 		onkeydown={(e) => {
@@ -649,7 +673,7 @@
 							(expandedInfographicIndex - 1 + infographicImages.length) % infographicImages.length
 						];
 				}}
-				aria-label="Previous infographic"
+				aria-label={m.aria_prev_slide()}
 			>
 				<ChevronLeft size={22} strokeWidth={2.5} />
 			</button>
@@ -662,7 +686,7 @@
 					expandedInfographic =
 						infographicImages[(expandedInfographicIndex + 1) % infographicImages.length];
 				}}
-				aria-label="Next infographic"
+				aria-label={m.aria_next_slide()}
 			>
 				<ChevronRight size={22} strokeWidth={2.5} />
 			</button>

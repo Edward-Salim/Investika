@@ -10,6 +10,8 @@
 		Image as ImageIcon
 	} from 'lucide-svelte';
 	import { Gb, Id, Cn, Jp, Kr } from 'svelte-flag-icons';
+	import vestiAITranslate from '$lib/assets/logos/vestiAI-translate.png';
+	import * as m from '$lib/paraglide/messages';
 	import type { PageData } from './$types';
 
 	let { data } = $props<{ data: PageData }>();
@@ -44,24 +46,24 @@
 
 	const translations = $derived({
 		en: {
-			title: title || 'Project Title',
-			description: description || 'Project description will appear here...'
+			title: title || m.submit_label_title(),
+			description: description || m.submit_placeholder_desc()
 		},
 		id: {
-			title: title ? `[ID] ${title}` : 'Judul Proyek',
-			description: description ? `[ID] ${description}` : 'Deskripsi proyek akan muncul di sini...'
+			title: title ? `[ID] ${title}` : m.submit_label_title(),
+			description: description ? `[ID] ${description}` : m.submit_placeholder_desc()
 		},
 		zh: {
-			title: title ? `[ZH] ${title}` : '项目名称',
-			description: description ? `[ZH] ${description}` : '项目描述将显示在这里...'
+			title: title ? `[ZH] ${title}` : m.submit_label_title(),
+			description: description ? `[ZH] ${description}` : m.submit_placeholder_desc()
 		},
 		ja: {
-			title: title ? `[JA] ${title}` : 'プロジェクト名',
-			description: description ? `[JA] ${description}` : 'プロジェクトの説明がここに表示されます...'
+			title: title ? `[JA] ${title}` : m.submit_label_title(),
+			description: description ? `[JA] ${description}` : m.submit_placeholder_desc()
 		},
 		ko: {
-			title: title ? `[KO] ${title}` : '프로젝트 제목',
-			description: description ? `[KO] ${description}` : '프로젝트 설명이 여기에 표시됩니다...'
+			title: title ? `[KO] ${title}` : m.submit_label_title(),
+			description: description ? `[KO] ${description}` : m.submit_placeholder_desc()
 		}
 	} satisfies Record<LangId, { title: string; description: string }>);
 
@@ -112,11 +114,10 @@
 		<header class="mb-10 flex flex-col gap-6 border-b border-slate-100 pb-8 md:flex-row md:items-end md:justify-between">
 			<div>
 				<h1 class="text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
-					Submit Project
+					{m.submit_title()}
 				</h1>
-
 				<p class="mt-2 max-w-xl text-sm text-slate-500">
-					Fill in the project details. Localization previews will update automatically.
+					{m.submit_subtitle()}
 				</p>
 			</div>
 
@@ -125,7 +126,7 @@
 					onclick={() => (window.location.href = '/')}
 					class="rounded-lg px-4 py-2 text-sm font-medium text-slate-500 transition hover:text-slate-950"
 				>
-					Cancel
+					{m.submit_btn_cancel()}
 				</button>
 
 				<button
@@ -135,9 +136,9 @@
 				>
 					{#if isSubmitting}
 						<span class="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
-						Publishing
+						{m.submit_btn_publishing()}
 					{:else}
-						Publish
+						{m.submit_btn_publish()}
 						<ArrowRight size={14} />
 					{/if}
 				</button>
@@ -154,11 +155,11 @@
 				</div>
 
 				<h2 class="text-2xl font-semibold tracking-tight text-slate-950">
-					Project submitted
+					{m.submit_success_title()}
 				</h2>
 
 				<p class="mt-4 text-sm leading-6 text-slate-500">
-					Your project has been submitted and translated into five languages. It is now under review.
+					{m.submit_success_desc()}
 				</p>
 
 				<div class="mt-8 flex justify-center gap-3">
@@ -166,14 +167,14 @@
 						onclick={() => (window.location.href = '/')}
 						class="rounded-lg bg-slate-950 px-5 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
 					>
-						Return home
+						{m.submit_success_btn()}
 					</button>
 
 					<button
 						onclick={() => (showSuccess = false)}
 						class="rounded-lg border border-slate-200 px-5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
 					>
-						Add another
+						{m.submit_btn_add()}
 					</button>
 				</div>
 			</section>
@@ -181,31 +182,31 @@
 			<div class="grid grid-cols-1 gap-12 lg:grid-cols-12">
 				<main class="space-y-10 lg:col-span-7">
 					<section class="space-y-6">
-						{@render SectionTitle("General info")}
+						{@render SectionTitle(m.submit_sec_general())}
 
 						<div class="space-y-6">
 							<div>
-								<label for="title" class="form-label">Project name</label>
+								<label for="title" class="form-label">{m.submit_label_title()}</label>
 								<input
 									type="text"
 									id="title"
 									bind:value={title}
-									placeholder="e.g. Nusantara Green Energy Hub"
+									placeholder={m.submit_placeholder_title()}
 									class="title-input"
 								/>
 							</div>
 
 							<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
 								<div>
-									<label for="sector" class="form-label">Sector</label>
+									<label for="sector" class="form-label">{m.submit_label_sector()}</label>
 									<div class="relative">
 										<select id="sector" bind:value={sector} class="field appearance-none pr-10">
-											<option>Energy</option>
-											<option>Manufacturing</option>
-											<option>Logistics</option>
-											<option>Agriculture</option>
-											<option>Tourism</option>
-											<option>Healthcare</option>
+											<option>{m.sector_energy()}</option>
+											<option>{m.sector_mfg()}</option>
+											<option>{m.sector_log()}</option>
+											<option>{m.sector_agri()}</option>
+											<option>{m.sector_tour()}</option>
+											<option>{m.sector_serv()}</option>
 										</select>
 										<ChevronDown
 											size={16}
@@ -215,14 +216,14 @@
 								</div>
 
 								<div>
-									<label for="location" class="form-label">Location</label>
+									<label for="location" class="form-label">{m.submit_label_location()}</label>
 									<div class="relative">
 										<select
 											id="location"
 											bind:value={location}
 											class="field appearance-none pr-10"
 										>
-											<option value="" disabled selected>Select Province</option>
+											<option value="" disabled selected>{m.submit_placeholder_location()}</option>
 											{#each data.provinces as prov}
 												<option value={prov.nama}>{prov.nama}</option>
 											{/each}
@@ -238,12 +239,12 @@
 					</section>
 
 					<section class="space-y-6">
-						{@render SectionTitle("Financials")}
+						{@render SectionTitle(m.submit_sec_financials())}
 
 						<div class="grid grid-cols-1 gap-8 md:grid-cols-2">
 							{@render RangeField(
 								"investment",
-								"Est. CAPEX",
+								m.submit_label_capex(),
 								investment,
 								0,
 								5000,
@@ -256,7 +257,7 @@
 
 							{@render RangeField(
 								"npv",
-								"Expected NPV",
+								m.submit_label_npv(),
 								npv,
 								0,
 								2000,
@@ -269,7 +270,7 @@
 
 							{@render RangeField(
 								"irr",
-								"Target IRR",
+								m.submit_label_irr(),
 								irr,
 								0,
 								40,
@@ -282,7 +283,7 @@
 
 							{@render RangeField(
 								"payback",
-								"Payback period",
+								m.submit_label_payback(),
 								payback,
 								0,
 								25,
@@ -296,17 +297,17 @@
 					</section>
 
 					<section class="space-y-6">
-						{@render SectionTitle("Technical details")}
+						{@render SectionTitle(m.submit_sec_technical())}
 
 						<div class="grid grid-cols-1 gap-5 md:grid-cols-3">
 							<div>
-								<label for="scheme" class="form-label">Business scheme</label>
+								<label for="scheme" class="form-label">{m.submit_label_scheme()}</label>
 								<div class="relative">
 									<select id="scheme" bind:value={scheme} class="field appearance-none pr-10">
-										<option>Public-Private Partnership (PPP)</option>
-										<option>Direct Investment</option>
-										<option>BUMN Partnership</option>
-										<option>Joint Venture</option>
+										<option>{m.submit_opt_ppp()}</option>
+										<option>{m.submit_opt_direct()}</option>
+										<option>{m.submit_opt_bumn()}</option>
+										<option>{m.submit_opt_jv()}</option>
 									</select>
 									<ChevronDown
 										size={16}
@@ -316,23 +317,23 @@
 							</div>
 
 							<div>
-								<label for="landArea" class="form-label">Land area</label>
+								<label for="landArea" class="form-label">{m.submit_label_land()}</label>
 								<input
 									id="landArea"
 									type="text"
 									bind:value={landArea}
-									placeholder="e.g. 1,200 Ha"
+									placeholder={m.submit_placeholder_land()}
 									class="field"
 								/>
 							</div>
 
 							<div>
-								<label for="kbli" class="form-label">KBLI code</label>
+								<label for="kbli" class="form-label">{m.submit_label_kbli()}</label>
 								<input
 									id="kbli"
 									type="text"
 									bind:value={kbli}
-									placeholder="e.g. 35111"
+									placeholder={m.submit_placeholder_kbli()}
 									class="field"
 								/>
 							</div>
@@ -340,11 +341,11 @@
 					</section>
 
 					<section>
-						<label for="description" class="form-label">Project description</label>
+						<label for="description" class="form-label">{m.submit_label_desc()}</label>
 						<textarea
 							id="description"
 							bind:value={description}
-							placeholder="Briefly explain the project scope, objectives, and investment appeal..."
+							placeholder={m.submit_placeholder_desc()}
 							rows="5"
 							class="field min-h-36 resize-none p-4 leading-6"
 						></textarea>
@@ -353,65 +354,65 @@
 
 				<aside class="lg:col-span-5">
 					<div class="sticky top-10 space-y-5">
-						<section class="rounded-2xl border border-slate-200 bg-white p-6">
-							<div class="mb-6 flex items-start justify-between gap-4">
-								<div class="flex items-center gap-3">
-									<div class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-										<Bot size={19} />
+						<div class="rounded-2xl bg-gradient-to-r from-bkpm-blue to-cyan-400 p-[3px] shadow-sm">
+							<section class="rounded-[calc(1rem-2px)] bg-white p-6 h-full">
+								<div class="mb-6 flex items-start justify-between gap-4">
+									<div class="flex items-center gap-3">
+										<img src={vestiAITranslate} alt="VestiAI" class="h-14 w-14 object-contain scale-125" />
+
+										<div>
+											<h2 class="text-sm font-semibold text-slate-950">{m.submit_hub_title()}</h2>
+											<p class="text-xs text-slate-500">{m.submit_hub_subtitle()}</p>
+										</div>
 									</div>
 
+									<div class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+										Active
+									</div>
+								</div>
+
+								<p class="mb-6 text-sm leading-6 text-slate-500">
+									{m.submit_hub_desc()}
+								</p>
+
+								<div class="mb-6 grid grid-cols-5 gap-2 rounded-xl bg-slate-50 p-1">
+									{#each languages as lang (lang.id)}
+										<button
+											onclick={() => (activePreviewLang = lang.id)}
+											aria-label={`Preview ${lang.name}`}
+											class="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-xs transition
+												{activePreviewLang === lang.id
+													? 'bg-white text-slate-950 shadow-sm'
+													: 'text-slate-400 hover:text-slate-700'}"
+										>
+											<lang.flag size="17" class="rounded-sm" />
+											<span class="text-[10px] font-medium">{lang.id.toUpperCase()}</span>
+										</button>
+									{/each}
+								</div>
+
+								<div class="space-y-5 rounded-xl border border-slate-200 p-5">
 									<div>
-										<h2 class="text-sm font-semibold text-slate-950">VestiAI Hub</h2>
-										<p class="text-xs text-slate-500">Localization preview</p>
+										<p class="preview-label">{m.submit_hub_translated_name()}</p>
+										<h3 class="mt-1 text-lg font-semibold leading-snug text-slate-950">
+											{translations[activePreviewLang].title}
+										</h3>
+									</div>
+
+									<div class="border-t border-slate-100 pt-5">
+										<p class="preview-label">{m.submit_hub_summary_snippet()}</p>
+										<p class="mt-1 line-clamp-3 text-sm leading-6 text-slate-500">
+											{translations[activePreviewLang].description}
+										</p>
 									</div>
 								</div>
 
-								<div class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-									Active
+								<div class="mt-6 flex items-center gap-2 text-xs text-slate-500">
+									<Globe size={14} />
+									<span>{m.submit_hub_compliance()}</span>
 								</div>
-							</div>
-
-							<p class="mb-6 text-sm leading-6 text-slate-500">
-								Preview how this opportunity may appear across investor-facing regional portals.
-							</p>
-
-							<div class="mb-6 grid grid-cols-5 gap-2 rounded-xl bg-slate-50 p-1">
-								{#each languages as lang (lang.id)}
-									<button
-										onclick={() => (activePreviewLang = lang.id)}
-										aria-label={`Preview ${lang.name}`}
-										class="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-xs transition
-											{activePreviewLang === lang.id
-												? 'bg-white text-slate-950 shadow-sm'
-												: 'text-slate-400 hover:text-slate-700'}"
-									>
-										<lang.flag size="17" class="rounded-sm" />
-										<span class="text-[10px] font-medium">{lang.id.toUpperCase()}</span>
-									</button>
-								{/each}
-							</div>
-
-							<div class="space-y-5 rounded-xl border border-slate-200 p-5">
-								<div>
-									<p class="preview-label">Translated name</p>
-									<h3 class="mt-1 text-lg font-semibold leading-snug text-slate-950">
-										{translations[activePreviewLang].title}
-									</h3>
-								</div>
-
-								<div class="border-t border-slate-100 pt-5">
-									<p class="preview-label">Summary snippet</p>
-									<p class="mt-1 line-clamp-3 text-sm leading-6 text-slate-500">
-										{translations[activePreviewLang].description}
-									</p>
-								</div>
-							</div>
-
-							<div class="mt-6 flex items-center gap-2 text-xs text-slate-500">
-								<Globe size={14} />
-								<span>BKPM-i 2026 compliant taxonomy</span>
-							</div>
-						</section>
+							</section>
+						</div>
 
 						<section class="rounded-2xl border border-slate-200 bg-white p-5">
 							<div class="flex gap-4">

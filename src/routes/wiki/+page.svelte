@@ -1,4 +1,5 @@
 <script lang="ts">
+	import * as m from '$lib/paraglide/messages.js';
 	import { BookOpenText, Search, Sigma, BriefcaseBusiness, Landmark, TrendingUp, FileText } from 'lucide-svelte';
 	import { fade } from 'svelte/transition';
 
@@ -16,16 +17,16 @@
 		{
 			term: 'PPI',
 			category: 'Project',
-			short: 'Project profile or preliminary project information.',
-			meaning: 'Used in Investika as a shorthand project-status style label for an early project information package, not yet a fully investment-ready opportunity.',
-			whyItMatters: 'If a project is still labeled PPI, the commercial package is likely thinner and an investor should expect more diligence questions.'
+			short: (m as any).wiki_term_ppi_short(),
+			meaning: (m as any).wiki_term_ppi_meaning(),
+			whyItMatters: (m as any).wiki_term_ppi_why()
 		},
 		{
 			term: 'IPRO',
 			category: 'Project',
-			short: 'Investment Project Ready to Offer.',
-			meaning: 'A project packaged far enough for investor review, usually with clearer sponsor, location, and commercial details.',
-			whyItMatters: 'This typically signals a more mature opportunity than a basic profile and a better starting point for investor outreach.'
+			short: (m as any).wiki_term_ipro_short(),
+			meaning: (m as any).wiki_term_ipro_meaning(),
+			whyItMatters: (m as any).wiki_term_ipro_why()
 		},
 		{
 			term: 'KPBU / PPP',
@@ -44,16 +45,16 @@
 		{
 			term: 'CAPEX',
 			category: 'Financial',
-			short: 'Capital expenditure required upfront.',
-			meaning: 'The upfront capital needed to build or launch the project, including land, machinery, construction, utilities, and setup costs.',
-			whyItMatters: 'CAPEX shapes funding needs, financing structure, and the scale of investor commitment required at entry.'
+			short: (m as any).wiki_term_capex_short(),
+			meaning: (m as any).wiki_term_capex_meaning(),
+			whyItMatters: (m as any).wiki_term_capex_why()
 		},
 		{
 			term: 'IRR',
 			category: 'Financial',
-			short: 'Expected annual return rate of the project.',
-			meaning: 'Internal Rate of Return estimates the annualized percentage return a project is expected to generate over time.',
-			whyItMatters: 'Investors use IRR as a fast benchmark for attractiveness when comparing multiple opportunities.'
+			short: (m as any).wiki_term_irr_short(),
+			meaning: (m as any).wiki_term_irr_meaning(),
+			whyItMatters: (m as any).wiki_term_irr_why()
 		},
 		{
 			term: 'NPV',
@@ -163,6 +164,14 @@
 		Document: 'bg-slate-200/70 text-slate-700 border-slate-200'
 	};
 
+	const categoryLabels: Record<GlossaryItem['category'], string> = {
+		Project: m.wiki_cat_project(),
+		Financial: m.wiki_cat_financial(),
+		Policy: m.wiki_cat_policy(),
+		Regional: m.reg_title(),
+		Document: m.wiki_cat_document()
+	};
+
 	const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 	let sortedItems = $derived.by(() =>
@@ -194,32 +203,32 @@
 		<div class="mx-auto max-w-7xl px-6 py-6 lg:px-8">
 			<div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
 				<div class="max-w-2xl">
-					<h1 class="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">Investment terms, decoded</h1>
+					<h1 class="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">{m.wiki_title()}</h1>
 					<p class="mt-1 text-sm font-medium text-slate-500">
-						Quick definitions for project, finance, policy, and regional terminology used across Investika.
+						{m.wiki_subtitle()}
 					</p>
 				</div>
 
 				<div class="flex flex-wrap gap-2 text-[10px] font-bold text-slate-400">
 					<div class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5">
 						<Sigma size={12} />
-						<span>{filteredItems.length} terms</span>
+						<span>{filteredItems.length} {m.wiki_stat_terms()}</span>
 					</div>
 					<div class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5">
 						<BriefcaseBusiness size={12} />
-						<span>{categoryCounts.Project || 0} project</span>
+						<span>{categoryCounts.Project || 0} {m.wiki_cat_project()}</span>
 					</div>
 					<div class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5">
 						<TrendingUp size={12} />
-						<span>{categoryCounts.Financial || 0} financial</span>
+						<span>{categoryCounts.Financial || 0} {m.wiki_cat_financial()}</span>
 					</div>
 					<div class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5">
 						<Landmark size={12} />
-						<span>{categoryCounts.Policy || 0} policy</span>
+						<span>{categoryCounts.Policy || 0} {m.wiki_cat_policy()}</span>
 					</div>
 					<div class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5">
 						<FileText size={12} />
-						<span>{categoryCounts.Document || 0} document</span>
+						<span>{categoryCounts.Document || 0} {m.wiki_cat_document()}</span>
 					</div>
 				</div>
 			</div>
@@ -231,7 +240,7 @@
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="Search IRR, KPBU, UMR..."
+					placeholder={m.wiki_search_placeholder()}
 					class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm font-semibold text-slate-800 outline-none transition-all placeholder:text-slate-300 focus:border-bkpm-blue focus:bg-white focus:ring-4 focus:ring-bkpm-blue/10"
 				/>
 			</div>
@@ -253,11 +262,11 @@
 					<table class="min-w-full border-collapse">
 						<thead class="bg-slate-50">
 							<tr class="border-b border-slate-200">
-								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Term</th>
-								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Category</th>
-								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Short</th>
-								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Meaning</th>
-								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Why It Matters</th>
+								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{m.wiki_table_term()}</th>
+								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{m.wiki_table_cat()}</th>
+								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{m.wiki_table_short()}</th>
+								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{m.wiki_table_meaning()}</th>
+								<th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{m.wiki_table_why()}</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-slate-100">
@@ -268,7 +277,7 @@
 									</td>
 									<td class="px-5 py-4">
 										<span class={`inline-flex rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${categoryTone[item.category]}`}>
-											{item.category}
+											{categoryLabels[item.category]}
 										</span>
 									</td>
 									<td class="px-5 py-4 text-[13px] font-semibold leading-6 text-slate-600">{item.short}</td>
@@ -282,8 +291,8 @@
 			</div>
 		{:else}
 			<div class="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm">
-				<h2 class="text-lg font-black text-slate-900">No matching term</h2>
-				<p class="mt-1 text-sm font-medium text-slate-500">Try `IRR`, `PDRB`, or `KPBU`.</p>
+				<h2 class="text-lg font-black text-slate-900">{m.wiki_empty_title()}</h2>
+				<p class="mt-1 text-sm font-medium text-slate-500">{m.wiki_empty_desc()}</p>
 			</div>
 		{/if}
 	</div>

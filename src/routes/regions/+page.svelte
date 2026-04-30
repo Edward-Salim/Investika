@@ -1,21 +1,42 @@
 <script lang="ts">
+	import * as m from '$lib/paraglide/messages.js';
 	import { Map, ChevronLeft, ChevronRight, BarChart2, Briefcase, Users, DollarSign, Activity, Factory, MapPin, Search, AlertCircle, Bot, ExternalLink, Loader2 } from 'lucide-svelte';
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
+	import { goto } from '$app/navigation';
 	import { fly, fade } from 'svelte/transition';
 	import type { PageData } from './$types';
 	import { compareStore } from '$lib/state/compare.svelte';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
+	import vestiAINews from '$lib/assets/logos/vestiAI-news.png';
 	import DataTable from '$lib/components/DataTable.svelte';
+	import RegionStaticMap from '$lib/components/RegionStaticMap.svelte';
+	import InfraInteractiveMap from '$lib/components/InfraInteractiveMap.svelte';
+	import { formatCurrency } from '$lib/utils/currency';
 
 	let { data } = $props<{ data: PageData }>();
+
+	// Helper for dynamic message lookup to avoid type lag
+	function msg(key: string, fallback: string): string {
+		return (m as any)[key] ? (m as any)[key]() : fallback;
+	}
 
 	let selectedId = $state<number | undefined>(undefined);
 
 	$effect(() => {
 		const urlId = page.url.searchParams.get('id');
-		selectedId = urlId ? parseInt(urlId) : data.provinces?.[0]?.id_adm_provinsi;
+		const newSelectedId = urlId ? parseInt(urlId) : data.provinces?.[0]?.id_adm_provinsi;
+		if (newSelectedId && selectedId !== newSelectedId) {
+			selectedId = newSelectedId;
+		}
 	});
+
+	const selectRegion = (id: number) => {
+		selectedId = id;
+		const newUrl = new URL(page.url);
+		newUrl.searchParams.set('id', id.toString());
+		goto(newUrl.toString(), { replaceState: true, noScroll: true, keepFocus: true });
+	};
 
 	let selectedRegion = $derived(
 		data.provinces?.find((p: any) => p.id_adm_provinsi == selectedId) ?? data.provinces?.[0]
@@ -27,21 +48,21 @@
 	let projectRail = $state<HTMLDivElement | null>(null);
 
 	const infraColumns = [
-		{ key: 'nama', label: 'Asset' },
-		{ key: 'kategori', label: 'Category' },
-		{ key: 'jenis', label: 'Type' }
+		{ key: 'nama', label: m.reg_infra_col_asset() },
+		{ key: 'kategori', label: m.reg_infra_col_cat() },
+		{ key: 'jenis', label: m.reg_infra_col_type() }
 	];
 
 	const officeColumns = [
-		{ key: 'nama', label: 'Office' },
-		{ key: 'alamat', label: 'Address' },
-		{ key: 'telepon', label: 'Contact', align: 'right' as const }
+		{ key: 'nama', label: m.fact_agency() },
+		{ key: 'alamat', label: msg('fact_address', 'Address') },
+		{ key: 'telepon', label: msg('fact_contact', 'Contact'), align: 'right' as const }
 	];
 
 	const wilayahFilters = [
-		{ id: 'wilayah indonesia bagian barat', label: 'Barat' },
-		{ id: 'wilayah indonesia bagian tengah', label: 'Tengah' },
-		{ id: 'wilayah indonesia bagian timur', label: 'Timur' }
+		{ id: 'wilayah indonesia bagian barat', label: m.reg_filter_west() },
+		{ id: 'wilayah indonesia bagian tengah', label: m.reg_filter_central() },
+		{ id: 'wilayah indonesia bagian timur', label: m.reg_filter_east() }
 	];
 
 	let filteredProvinces = $derived(
@@ -111,11 +132,12 @@
 
 	let sectorDominanceChart = $derived.by(() => {
 		const sectors: Array<{ name: string; value: number }> = (selectedRegion?.sectorInvestment ?? [])
-			.slice(0, 6)
 			.map((sector: any) => ({
 				name: sector.sektor,
 				value: Number(sector.nilai || 0)
-			}));
+			}))
+			.sort((a: any, b: any) => b.value - a.value)
+			.slice(0, 6);
 		const maxValue = Math.max(...sectors.map((sector) => sector.value), 1);
 		return sectors.map((sector) => ({
 			...sector,
@@ -131,7 +153,7 @@
 				<div class="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600 mb-6">
 					<AlertCircle size={24} />
 				</div>
-				<h2 class="text-2xl font-black text-slate-900">Database Connection Error</h2>
+				<h2 class="text-2xl font-black text-slate-900">{m.reg_db_error()}</h2>
 				<p class="text-red-600 font-bold font-mono text-sm bg-white p-4 rounded-2xl border border-red-100">
 					{data.error}
 				</p>
@@ -144,7 +166,7 @@
 					onclick={() => window.location.reload()}
 					class="w-full py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-bkpm-blue transition-colors"
 				>
-					Retry Connection
+					{m.reg_retry()}
 				</button>
 			</div>
 		</div>
@@ -153,7 +175,7 @@
 	<!-- Sidebar: List of Regions -->
 	<div class="border-r border-slate-200 bg-white flex flex-col min-w-0">
 		<div class="p-5 border-b border-slate-100">
-			<h2 class="text-lg font-black text-slate-900 tracking-tight mb-3">Regions</h2>
+			<h2 class="text-lg font-black text-slate-900 tracking-tight mb-3">{m.reg_title()}</h2>
 			
 			<!-- Wilayah Filter -->
 			<div class="flex gap-1 p-1 bg-slate-50 rounded-lg mb-3">
@@ -161,7 +183,7 @@
 					onclick={() => selectedWilayah = null}
 					class="flex-1 py-1 text-[9px] font-semibold uppercase tracking-widest rounded-md transition-all cursor-pointer {selectedWilayah === null ? 'bg-white text-bkpm-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}"
 				>
-					All
+					{m.reg_filter_all()}
 				</button>
 				{#each wilayahFilters as filter (filter.id)}
 					<button 
@@ -177,17 +199,31 @@
 				<Search size={14} class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
 				<input 
 					type="text" 
-					placeholder="Search daerah..." 
+					placeholder={m.reg_search_placeholder()}
 					bind:value={searchQuery}
 					class="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-bkpm-blue/50 transition-all"
 				/>
 			</div>
 		</div>
 
+		<!-- Selected Region Context Map -->
+		{#if selectedRegion}
+			<div class="px-5 py-3 border-b border-slate-100 bg-slate-50/50">
+				<div class="h-28 w-full">
+					<RegionStaticMap 
+						lat={selectedRegion.lat} 
+						lon={selectedRegion.lon} 
+						name={selectedRegion.nama} 
+						zoom={7} 
+					/>
+				</div>
+			</div>
+		{/if}
+
 		<div class="flex-1 overflow-y-auto p-2 space-y-1">
 			{#each filteredProvinces as province (province.id_adm_provinsi)}
 				<button 
-					onclick={() => selectedId = province.id_adm_provinsi}
+					onclick={() => selectRegion(province.id_adm_provinsi)}
 					class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group cursor-pointer {selectedId == province.id_adm_provinsi ? 'bg-bkpm-blue text-white shadow-lg shadow-bkpm-blue/20' : 'hover:bg-slate-50 text-slate-600'}"
 				>
 					<span class="text-sm font-bold truncate pr-2">{province.nama}</span>
@@ -240,12 +276,12 @@
 							</span>
 							<div class="flex items-center gap-1 rounded-full border border-bkpm-blue/40 bg-bkpm-blue px-2.5 py-1 text-white shadow-md">
 								<Briefcase size={10} strokeWidth={3} />
-								<span class="text-[8px] font-black md:text-[9px]">{selectedRegion.count} <span class="ml-0.5 font-bold opacity-80">Projects</span></span>
+								<span class="text-[8px] font-black md:text-[9px]">{selectedRegion.count} <span class="ml-0.5 font-bold opacity-80">{m.reg_label_projects()}</span></span>
 							</div>
 						</div>
 						<h1 class="mb-2 text-3xl font-black leading-none tracking-tight text-white drop-shadow-lg md:text-5xl">{selectedRegion.nama}</h1>
 						<p class="max-w-2xl text-[11px] font-medium leading-relaxed text-white/90 md:text-sm drop-shadow-md">
-							{stripHtml(selectedRegion.deskripsi).slice(0, 220) || `Explore high-yield investment clusters and strategic growth opportunities within ${selectedRegion.nama}.`}{stripHtml(selectedRegion.deskripsi).length > 220 ? '…' : ''}
+							{stripHtml(selectedRegion.deskripsi).slice(0, 220) || m.reg_hero_desc_fallback({ region: selectedRegion.nama })}{stripHtml(selectedRegion.deskripsi).length > 220 ? '…' : ''}
 						</p>
 						</div>
 					</div>
@@ -260,7 +296,7 @@
 								<div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-bkpm-blue/10 text-bkpm-blue transition-colors group-hover:bg-bkpm-blue group-hover:text-white">
 									<Map size={13} strokeWidth={2.5} />
 								</div>
-								<h4 class="text-[8px] font-black uppercase tracking-widest leading-none text-slate-400">Land Area</h4>
+								<h4 class="text-[8px] font-black uppercase tracking-widest leading-none text-slate-400">{m.reg_stat_area()}</h4>
 							</div>
 							<p class="text-sm font-black leading-none text-slate-900">
 								{selectedRegion.luas_wilayah ? new Intl.NumberFormat('id-ID').format(Number(selectedRegion.luas_wilayah)) + ' km²' : 'TBD'}
@@ -273,10 +309,10 @@
 								<div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-bkpm-blue/10 text-bkpm-blue transition-colors group-hover:bg-bkpm-blue group-hover:text-white">
 									<Users size={13} strokeWidth={2.5} />
 								</div>
-								<h4 class="text-[8px] font-black uppercase tracking-widest leading-none text-slate-400">Population (2024)</h4>
+								<h4 class="text-[8px] font-black uppercase tracking-widest leading-none text-slate-400">{m.reg_stat_pop()}</h4>
 							</div>
 							<p class="text-sm font-black leading-none text-slate-900">
-								{selectedRegion.population > 0 ? formatCompact(selectedRegion.population) + ' Jiwa' : 'TBD'}
+								{selectedRegion.population > 0 ? formatCompact(selectedRegion.population) + ' ' + m.reg_stat_pop_unit() : 'TBD'}
 							</p>
 						</div>
 
@@ -286,10 +322,10 @@
 								<div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-bkpm-blue/10 text-bkpm-blue transition-colors group-hover:bg-bkpm-blue group-hover:text-white">
 									<DollarSign size={13} strokeWidth={2.5} />
 								</div>
-								<h4 class="text-[8px] font-black uppercase tracking-widest leading-none text-slate-400">Min. Wage (2025)</h4>
+								<h4 class="text-[8px] font-black uppercase tracking-widest leading-none text-slate-400">{m.reg_stat_wage()}</h4>
 							</div>
 							<p class="text-sm font-black leading-none text-slate-900">
-								{selectedRegion.umr > 0 ? 'Rp ' + formatCompact(Number(selectedRegion.umr)) : 'TBD'}
+								{selectedRegion.umr > 0 ? formatCurrency(selectedRegion.umr) : 'TBD'}
 							</p>
 						</div>
 
@@ -299,10 +335,10 @@
 								<div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-bkpm-blue/10 text-bkpm-blue transition-colors group-hover:bg-bkpm-blue group-hover:text-white">
 									<BarChart2 size={13} strokeWidth={2.5} />
 								</div>
-								<h4 class="text-[8px] font-black uppercase tracking-widest leading-none text-slate-400">GRDP / PDRB (2024)</h4>
+								<h4 class="text-[8px] font-black uppercase tracking-widest leading-none text-slate-400">{m.reg_stat_grdp()}</h4>
 							</div>
 							<p class="text-sm font-black leading-none text-slate-900">
-								{selectedRegion.pdrb > 0 ? 'Rp ' + formatCompact(Number(selectedRegion.pdrb)) : 'TBD'}
+								{selectedRegion.pdrb > 0 ? formatCurrency(selectedRegion.pdrb) : 'TBD'}
 							</p>
 						</div>
 					</div>
@@ -314,10 +350,10 @@
 						<div class="space-y-5">
 							<div class="flex items-end justify-between gap-4 border-b border-slate-200/70 pb-4">
 								<div>
-									<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">Active Opportunities</h2>
-									<p class="mt-1 text-xs font-medium text-slate-400">High-impact investment projects in {selectedRegion.nama}</p>
+									<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">{m.reg_opp_title()}</h2>
+									<p class="mt-1 text-xs font-medium text-slate-400">{m.reg_opp_subtitle({ region: selectedRegion.nama })}</p>
 								</div>
-								<a href="/search" class="text-[10px] font-bold text-bkpm-blue hover:bg-bkpm-blue/5 transition-all uppercase tracking-widest px-4 py-2 rounded-xl border border-bkpm-blue/10">Explore All</a>
+								<a href="/search" class="text-[10px] font-bold text-bkpm-blue hover:bg-bkpm-blue/5 transition-all uppercase tracking-widest px-4 py-2 rounded-xl border border-bkpm-blue/10">{m.reg_opp_explore()}</a>
 							</div>
 							
 							{#if selectedRegion.projects.length > 0}
@@ -326,7 +362,7 @@
 										bind:this={projectRail}
 										class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
 									>
-										{#each selectedRegion.projects as project (project.id)}
+										{#each [...selectedRegion.projects].sort((a, b) => Number(b.total_capex) - Number(a.total_capex)) as project (project.id)}
 											<div class="w-[320px] shrink-0">
 												<ProjectCard {project} hideLocation={true} />
 											</div>
@@ -338,8 +374,8 @@
 									<div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-200 mb-4">
 										<Briefcase size={32} />
 									</div>
-									<h4 class="text-base font-black text-slate-600 mb-1">No active projects available yet</h4>
-									<p class="text-sm text-slate-400 max-w-sm text-balance">We're currently finalizing new investment opportunities for this region. Please check back soon.</p>
+									<h4 class="text-base font-black text-slate-600 mb-1">{m.reg_opp_empty_title()}</h4>
+									<p class="text-sm text-slate-400 max-w-sm text-balance">{m.reg_opp_empty_desc()}</p>
 								</div>
 							{/if}
 						</div>
@@ -347,37 +383,49 @@
 						<!-- Sector & Infrastructure -->
 						<div class="flex min-w-0 flex-col gap-8">
 							<!-- Sector Dominance -->
-							<!-- Sector Dominance -->
 							{#if selectedRegion.sectorInvestment.length > 0}
 								<section class="space-y-6">
 									<div class="border-b border-slate-200/70 pb-4">
-										<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">Sector Dominance</h2>
-										<p class="mt-1 text-xs font-medium text-slate-400">Leading investment industries by capital realization</p>
+										<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">{m.reg_sector_title()}</h2>
+										<p class="mt-1 text-xs font-medium text-slate-400">{m.reg_sector_subtitle()}</p>
 									</div>
 
-									<div class="space-y-4">
-										{#each sectorDominanceChart as sector, i (`${sector.name}-${i}`)}
-											<div class="group relative flex flex-col gap-2">
-												<!-- Header: Rank, Name, Value -->
-												<div class="flex items-center justify-between gap-3">
-													<div class="flex items-center gap-2.5 min-w-0">
-														<div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[9px] font-black text-white shadow-sm">
-															{i + 1}
+									<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+										<!-- Static Region Map -->
+										<div class="lg:col-span-4 min-h-[240px]">
+											<RegionStaticMap 
+												lat={selectedRegion.lat} 
+												lon={selectedRegion.lon} 
+												name={selectedRegion.nama} 
+												zoom={selectedRegion.nama === 'Aceh' ? 7 : 8} 
+											/>
+										</div>
+
+										<!-- Sector Bars -->
+										<div class="lg:col-span-8 space-y-4">
+											{#each sectorDominanceChart as sector, i (`${sector.name}-${i}`)}
+												<div class="group relative flex flex-col gap-2">
+													<!-- Header: Rank, Name, Value -->
+													<div class="flex items-center justify-between gap-3">
+														<div class="flex items-center gap-2.5 min-w-0">
+															<div class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[9px] font-black text-white shadow-sm">
+																{i + 1}
+															</div>
+															<span class="truncate text-[10px] font-black text-slate-700 uppercase tracking-tight">{sector.name}</span>
 														</div>
-														<span class="truncate text-[10px] font-black text-slate-700 uppercase tracking-tight">{sector.name}</span>
+														<span class="shrink-0 text-[10px] font-black text-bkpm-blue bg-bkpm-blue/5 px-2 py-0.5 rounded-md">{formatCurrency(sector.value)}</span>
 													</div>
-													<span class="shrink-0 text-[10px] font-black text-bkpm-blue bg-bkpm-blue/5 px-2 py-0.5 rounded-md">Rp {formatCompact(sector.value)}</span>
+													
+													<!-- Progress Bar -->
+													<div class="relative h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+														<div
+															class="h-full rounded-full bg-gradient-to-r from-bkpm-blue to-cyan-400 transition-all duration-1000"
+															style="width: {sector.width}"
+														></div>
+													</div>
 												</div>
-												
-												<!-- Progress Bar -->
-												<div class="relative h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-													<div
-														class="h-full rounded-full bg-gradient-to-r from-bkpm-blue to-cyan-400 transition-all duration-1000"
-														style="width: {sector.width}"
-													></div>
-												</div>
-											</div>
-										{/each}
+											{/each}
+										</div>
 									</div>
 								</section>
 							{/if}
@@ -386,33 +434,29 @@
 							{#if selectedRegion.infrastructure.length > 0}
 								<section class="space-y-6">
 									<div class="border-b border-slate-200/70 pb-4">
-										<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">Key Infrastructure</h2>
-										<p class="mt-1 text-xs font-medium text-slate-400">Strategic industrial and utility assets in {selectedRegion.nama}</p>
+										<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">{m.reg_infra_title()}</h2>
+										<p class="mt-1 text-xs font-medium text-slate-400">{m.reg_infra_subtitle({ region: selectedRegion.nama })}</p>
 									</div>
-									<DataTable 
-										data={selectedRegion.infrastructure} 
-										columns={infraColumns}
-										pageSize={5}
-									>
-										{#snippet cell(item, col)}
-											{#if col.key === 'nama'}
-												<span class="text-xs font-semibold text-slate-900 group-hover:text-bkpm-blue transition-colors leading-snug">{stripHtml(item.nama) || '-'}</span>
-											{:else if col.key === 'kategori'}
-												<span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">{stripHtml(item.kategori) || 'Asset'}</span>
-											{:else if col.key === 'jenis'}
-												<span class="text-[12px] font-medium text-slate-500">{stripHtml(item.jenis) || '-'}</span>
-											{/if}
-										{/snippet}
-									</DataTable>
+									<div class="h-[450px]">
+										{#key selectedId}
+											<InfraInteractiveMap 
+												items={selectedRegion.infrastructure} 
+												projects={selectedRegion.projects}
+												centerLat={selectedRegion.lat} 
+												centerLon={selectedRegion.lon} 
+												regionName={selectedRegion.nama}
+											/>
+										{/key}
+									</div>
 								</section>
 							{/if}
 						</div>
 
 						<!-- Regional Intelligence News Feed -->
-						<section class="space-y-4">
+						<section class="mt-12 space-y-4">
 							<div class="border-b border-slate-200/70 pb-4">
-								<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">Regional Intelligence</h2>
-								<p class="mt-1 text-xs font-medium text-slate-400">News and AI market read for {selectedRegion.nama}</p>
+								<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">{m.reg_intel_title()}</h2>
+								<p class="mt-1 text-xs font-medium text-slate-400">{m.reg_intel_subtitle({ region: selectedRegion.nama })}</p>
 							</div>
 
 							<div class="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -423,17 +467,14 @@
 										<div class="absolute right-0 top-0 h-24 w-24 rounded-full bg-bkpm-blue/15 blur-3xl"></div>
 										
 										<div class="relative z-10 space-y-4">
-											<div class="flex items-center gap-2.5">
-												<div class="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-bkpm-blue backdrop-blur-xl">
-													<Bot size={14} />
+											<div class="flex items-start gap-5">
+												<img src={vestiAINews} alt="VestiAI" class="h-24 w-24 object-contain scale-150 shrink-0" />
+												<div class="space-y-2.5">
+													<h4 class="text-xs font-black tracking-[0.08em] text-white">{m.reg_ai_summary()}</h4>
+													<p class="text-sm italic leading-relaxed text-slate-300">
+														"{m.reg_ai_text_template({ region: selectedRegion.nama })}"
+													</p>
 												</div>
-												<h4 class="text-xs font-black tracking-[0.08em] text-white">VestiAI Summary</h4>
-											</div>
-
-											<div class="space-y-3">
-												<p class="text-sm italic leading-relaxed text-slate-300">
-													"Sentiment in {selectedRegion.nama} is shifting toward **Aggressive Infrastructure Growth**. Recent approvals for industrial clusters suggest a high degree of government alignment with FDI goals."
-												</p>
 											</div>
 										</div>
 									</div>
@@ -443,7 +484,7 @@
 								<div class="space-y-3 xl:order-1">
 									{#if isNewsLoading}
 										<div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-[11px] font-medium text-slate-400">
-											Loading live regional headlines...
+											{m.reg_news_loading()}
 										</div>
 									{:else if newsItems.length > 0}
 										{#each newsItems as news}
@@ -477,7 +518,7 @@
 										{/each}
 									{:else}
 										<div class="rounded-2xl border border-slate-100 bg-white px-4 py-3.5 text-[11px] font-medium text-slate-400">
-											No live headlines available for {selectedRegion.nama} right now.
+											{m.reg_news_empty({ region: selectedRegion.nama })}
 										</div>
 									{/if}
 								</div>
@@ -487,8 +528,8 @@
 						<!-- Institutional Section (Full Width Table) -->
 						<div class="space-y-6">
 							<div class="border-b border-slate-200/70 pb-4">
-								<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">Institutional Contacts</h2>
-								<p class="mt-1 text-xs font-medium text-slate-400">Direct connection to regional investment authorities</p>
+								<h2 class="text-lg font-black tracking-tight text-slate-900 md:text-xl">{m.reg_inst_title()}</h2>
+								<p class="mt-1 text-xs font-medium text-slate-400">{m.reg_inst_subtitle()}</p>
 							</div>
 							
 							{#if selectedRegion.offices.length > 0}
@@ -525,7 +566,7 @@
 									<div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-200 mb-4">
 										<MapPin size={32} />
 									</div>
-									<h4 class="text-base font-black text-slate-400">Institutional data is being verified for this region</h4>
+									<h4 class="text-base font-black text-slate-400">{m.reg_inst_empty()}</h4>
 								</div>
 							{/if}
 						</div>
@@ -539,9 +580,10 @@
 				<div class="w-14 h-14 rounded-2xl bg-bkpm-blue/10 flex items-center justify-center text-bkpm-blue mb-6">
 					<Loader2 size={24} class="animate-spin" />
 				</div>
-				<h3 class="text-lg font-semibold text-slate-900 mb-2">Loading Regional Data</h3>
-				<p class="text-sm text-slate-400 max-w-sm">Fetching investment opportunities, infrastructure data, and institutional contacts…</p>
+				<h3 class="text-lg font-semibold text-slate-900 mb-2">{m.reg_loading_title()}</h3>
+				<p class="text-sm text-slate-400 max-w-sm">{m.reg_loading_desc()}</p>
 			</div>
 		{/if}
 	</div>
 </div>
+
