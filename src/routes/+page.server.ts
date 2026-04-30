@@ -10,36 +10,30 @@ export const load: PageServerLoad = async () => {
 			return { projects: getMockProjects().map(mapProjectToCard) };
 		}
 
-		let provinces: any[] = [];
-		try {
-			provinces = await db
-				.select({
-					id_adm_provinsi: admProvinces.id_adm_provinsi,
-					wilayah_group: admProvinces.wilayah_group
-				})
-				.from(admProvinces);
-		} catch (error) {
-			console.error('Failed to fetch provinces:', error);
-		}
-
-		const wilayahMap = Object.fromEntries(provinces.map((province) => [province.id_adm_provinsi, province.wilayah_group]));
-
-		let projects: any[] = [];
-		try {
-			projects = await db.query.investmentOpportunities.findMany({
-				limit: 200,
+		// Run both queries in parallel for speed
+		const [provResult, projResult] = await Promise.allSettled([
+			db.select({
+				id_adm_provinsi: admProvinces.id_adm_provinsi,
+				wilayah_group: admProvinces.wilayah_group
+			}).from(admProvinces),
+			db.query.investmentOpportunities.findMany({
+				limit: 100,
 				with: {
 					details: true
 				}
-			});
-		} catch (error) {
-			console.error('Failed to fetch projects from DB, falling back to mock data:', error);
-			projects = getMockProjects();
-		}
+			})
+		]);
+
+		const provinces = provResult.status === 'fulfilled' ? provResult.value : [];
+		let projects = projResult.status === 'fulfilled' ? projResult.value : getMockProjects();
 
 		if (projects.length === 0) {
 			projects = getMockProjects();
 		}
+
+		const wilayahMap = Object.fromEntries(
+			provinces.map((p) => [p.id_adm_provinsi, p.wilayah_group])
+		);
 
 		return {
 			projects: projects

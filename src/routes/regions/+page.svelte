@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Map, ChevronDown, BarChart2, Briefcase, Users, DollarSign, Activity, Factory, MapPin, Search, Image, AlertCircle, Bot } from 'lucide-svelte';
+	import { Map, ChevronDown, ChevronLeft, ChevronRight, BarChart2, Briefcase, Users, DollarSign, Activity, Factory, MapPin, Search, Image, AlertCircle, Bot, Check, Newspaper, Sparkles, ExternalLink, Loader2 } from 'lucide-svelte';
 	import { page } from '$app/state';
 	import { fly, fade } from 'svelte/transition';
 	import type { PageData } from './$types';
@@ -7,25 +7,31 @@
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
 
 	let { data } = $props<{ data: PageData }>();
-	
-	let selectedId = $state<number | undefined>(undefined);
-	
-	// Set initial selected ID when data loads or URL changes
-	$effect(() => {
-		const urlId = page.url.searchParams.get('id');
-		if (urlId) {
-			const idNum = parseInt(urlId);
-			if (!isNaN(idNum)) {
-				selectedId = idNum;
-			}
-		} else if (!selectedId && data.provinces.length > 0) {
-			selectedId = data.provinces[0].id_adm_provinsi;
-		}
-	});
 
-	let selectedRegion = $derived(data.provinces.find((p: any) => p.id_adm_provinsi === selectedId));
+	// Initialize from URL param or default to first province
+	const urlId = page.url.searchParams.get('id');
+	let selectedId = $state<number>(urlId ? parseInt(urlId) : data.provinces?.[0]?.id_adm_provinsi);
+
+	let selectedRegion = $derived(
+		data.provinces?.find((p: any) => p.id_adm_provinsi == selectedId) ?? data.provinces?.[0]
+	);
 	let searchQuery = $state('');
 	let selectedWilayah = $state<string | null>(null);
+	let officePage = $state(0);
+	const officePageSize = 5;
+
+	// Reset office pagination when region changes
+	$effect(() => {
+		if (selectedId) officePage = 0;
+	});
+
+	let paginatedOffices = $derived({
+		items: selectedRegion?.offices?.slice(officePage * officePageSize, (officePage + 1) * officePageSize) ?? [],
+		total: selectedRegion?.offices?.length ?? 0,
+		totalPages: Math.ceil((selectedRegion?.offices?.length ?? 0) / officePageSize),
+		start: officePage * officePageSize + 1,
+		end: Math.min((officePage + 1) * officePageSize, selectedRegion?.offices?.length ?? 0)
+	});
 
 	const wilayahFilters = [
 		{ id: 'wilayah indonesia bagian barat', label: 'Barat' },
@@ -97,17 +103,17 @@
 			<h2 class="text-lg font-black text-slate-900 tracking-tight mb-3">Regions</h2>
 			
 			<!-- Wilayah Filter -->
-			<div class="flex gap-1 p-1 bg-slate-50 rounded-xl mb-3">
+			<div class="flex gap-1 p-1 bg-slate-50 rounded-lg mb-3">
 				<button 
 					onclick={() => selectedWilayah = null}
-					class="flex-1 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all {selectedWilayah === null ? 'bg-white text-bkpm-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}"
+					class="flex-1 py-1 text-[9px] font-semibold uppercase tracking-widest rounded-md transition-all {selectedWilayah === null ? 'bg-white text-bkpm-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}"
 				>
 					All
 				</button>
-				{#each wilayahFilters as filter}
+				{#each wilayahFilters as filter (filter.id)}
 					<button 
 						onclick={() => selectedWilayah = filter.id}
-						class="flex-1 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all {selectedWilayah === filter.id ? 'bg-white text-bkpm-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}"
+						class="flex-1 py-1 text-[9px] font-semibold uppercase tracking-widest rounded-md transition-all {selectedWilayah === filter.id ? 'bg-white text-bkpm-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}"
 					>
 						{filter.label}
 					</button>
@@ -120,19 +126,19 @@
 					type="text" 
 					placeholder="Search daerah..." 
 					bind:value={searchQuery}
-					class="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-bkpm-blue/20 transition-all"
+					class="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-bkpm-blue/50 transition-all"
 				/>
 			</div>
 		</div>
 
 		<div class="flex-1 overflow-y-auto p-2 space-y-1">
-			{#each filteredProvinces as province}
+			{#each filteredProvinces as province (province.id_adm_provinsi)}
 				<button 
 					onclick={() => selectedId = province.id_adm_provinsi}
-					class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group {selectedId === province.id_adm_provinsi ? 'bg-bkpm-blue text-white shadow-lg shadow-bkpm-blue/20' : 'hover:bg-slate-50 text-slate-600'}"
+					class="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group {selectedId == province.id_adm_provinsi ? 'bg-bkpm-blue text-white shadow-lg shadow-bkpm-blue/20' : 'hover:bg-slate-50 text-slate-600'}"
 				>
 					<span class="text-sm font-bold truncate pr-2">{province.nama}</span>
-					<span class="text-[10px] font-black px-2 py-0.5 rounded-full {selectedId === province.id_adm_provinsi ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}">
+					<span class="text-[10px] font-black px-2 py-0.5 rounded-full {selectedId == province.id_adm_provinsi ? 'bg-white/20' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200'}">
 						{province.count}
 					</span>
 				</button>
@@ -141,7 +147,7 @@
 	</div>
 
 	<!-- Main Content Area -->
-	<div class="flex-1 overflow-y-auto relative custom-scrollbar">
+	<div class="flex-1 overflow-y-auto relative custom-scrollbar min-w-0">
 		{#if selectedRegion}
 			<div class="max-w-5xl mx-auto pb-8" in:fade={{ duration: 400 }}>
 				<!-- Hero Banner with Region Name -->
@@ -258,12 +264,12 @@
 							
 							{#if selectedRegion.projects.length > 0}
 								<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-									{#each selectedRegion.projects as project}
+									{#each selectedRegion.projects as project (project.id)}
 										<ProjectCard {project} hideLocation={true} />
 									{/each}
 								</div>
 							{:else}
-								<div class="py-16 rounded-[40px] border-2 border-dashed border-slate-100 bg-slate-50/50 flex flex-col items-center justify-center text-center">
+								<div class="py-16 rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50/50 flex flex-col items-center justify-center text-center">
 									<div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-200 mb-4">
 										<Briefcase size={32} />
 									</div>
@@ -277,7 +283,7 @@
 						<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 							<!-- Sector Dominance -->
 							{#if selectedRegion.sectorInvestment.length > 0}
-								<div class="bg-slate-900 rounded-[40px] p-8 shadow-2xl relative overflow-hidden group">
+								<div class="bg-slate-900 rounded-3xl p-8 shadow-2xl relative overflow-hidden group">
 									<div class="absolute top-0 right-0 w-80 h-80 bg-bkpm-blue/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 group-hover:bg-bkpm-blue/20 transition-colors duration-1000"></div>
 									
 									<div class="relative z-10">
@@ -291,7 +297,7 @@
 											</div>
 										</div>
 										<div class="space-y-6">
-											{#each selectedRegion.sectorInvestment.slice(0, 5) as sector, i}
+											{#each selectedRegion.sectorInvestment.slice(0, 5) as sector, i (i)}
 												<div class="flex flex-col gap-2.5">
 													<div class="flex justify-between items-end">
 														<span class="text-sm font-bold text-slate-100 flex items-center gap-4">
@@ -314,7 +320,7 @@
 
 							<!-- Key Infrastructure -->
 							{#if selectedRegion.infrastructure.length > 0}
-								<div class="bg-white rounded-[40px] border border-slate-100 p-8 shadow-sm flex flex-col">
+								<div class="bg-white rounded-3xl border border-slate-100 p-8 shadow-sm flex flex-col">
 									<div class="flex items-center gap-4 mb-8">
 										<div class="w-12 h-12 rounded-2xl bg-bkpm-blue/10 flex items-center justify-center text-bkpm-blue">
 											<Factory size={22} strokeWidth={2.5} />
@@ -325,7 +331,7 @@
 										</div>
 									</div>
 									<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
-										{#each selectedRegion.infrastructure.slice(0, 8) as item}
+										{#each selectedRegion.infrastructure.slice(0, 8) as item, i (i)}
 											<div class="p-4 bg-slate-50/50 rounded-2xl border border-slate-50 flex items-center justify-between group hover:bg-white hover:border-bkpm-blue/20 hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-500">
 												<div class="flex items-center gap-4 min-w-0">
 													<div class="w-2.5 h-2.5 rounded-full bg-bkpm-blue/20 group-hover:bg-bkpm-blue group-hover:scale-125 transition-all duration-500"></div>
@@ -341,6 +347,90 @@
 							{/if}
 						</div>
 
+						<!-- Regional Intelligence News Feed -->
+						<section class="space-y-6">
+							<div class="flex items-center gap-4 border-b border-slate-100 pb-5">
+								<div class="w-10 h-10 rounded-2xl bg-bkpm-blue/10 flex items-center justify-center text-bkpm-blue">
+									<Newspaper size={20} strokeWidth={2.5} />
+								</div>
+								<div>
+									<h3 class="text-xl font-black text-slate-900 tracking-tight">Regional Intelligence</h3>
+									<p class="text-xs text-slate-400 mt-0.5">Real-time news and AI-synthesized market sentiment for {selectedRegion.nama}</p>
+								</div>
+							</div>
+
+							<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+								<!-- News Feed -->
+								<div class="lg:col-span-2 space-y-4">
+									{#each [
+										{ date: '2h ago', title: `New Industrial Cluster Development Plan in ${selectedRegion.nama} Approved`, source: 'Antara News' },
+										{ date: '5h ago', title: `Foreign Direct Investment in ${selectedRegion.nama} Reaches Record High in Q1`, source: 'Jakarta Post' },
+										{ date: '1d ago', title: `Infrastructure Expansion: New Toll Road Connecting Primary Ports in ${selectedRegion.nama}`, source: 'Bisnis Indonesia' },
+										{ date: '2d ago', title: `Regional Government Streamlines Licensing for Green Energy Projects`, source: 'Tempo' }
+									] as news}
+										<div class="p-5 bg-white rounded-3xl border border-slate-100 hover:border-bkpm-blue/20 hover:shadow-lg hover:shadow-slate-200/40 transition-all group cursor-pointer">
+											<div class="flex justify-between items-start gap-4">
+												<div class="space-y-2">
+													<div class="flex items-center gap-2">
+														<span class="text-[9px] font-black text-bkpm-blue uppercase tracking-widest">{news.source}</span>
+														<span class="h-1 w-1 bg-slate-300 rounded-full"></span>
+														<span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{news.date}</span>
+													</div>
+													<h4 class="text-sm font-semibold text-slate-900 group-hover:text-bkpm-blue transition-colors leading-snug">
+														{news.title}
+													</h4>
+												</div>
+												<ExternalLink size={14} class="text-slate-300 group-hover:text-bkpm-blue transition-colors shrink-0" />
+											</div>
+										</div>
+									{/each}
+								</div>
+
+								<!-- VestiAI Intelligence Summary -->
+								<div class="lg:col-span-1">
+									<div class="bg-slate-950 rounded-[2.5rem] p-8 relative overflow-hidden h-full">
+										<!-- Decoration -->
+										<div class="absolute top-0 right-0 w-32 h-32 bg-bkpm-blue/20 rounded-full blur-3xl"></div>
+										
+										<div class="relative z-10 space-y-6">
+											<div class="flex items-center gap-3">
+												<div class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-bkpm-blue backdrop-blur-xl border border-white/10">
+													<Sparkles size={16} />
+												</div>
+												<h4 class="text-sm font-bold text-white uppercase tracking-widest">VestiAI Summary</h4>
+											</div>
+
+											<div class="space-y-4">
+												<p class="text-sm text-slate-300 leading-relaxed italic">
+													"Sentiment in {selectedRegion.nama} is shifting toward **Aggressive Infrastructure Growth**. Recent approvals for industrial clusters suggest a high degree of government alignment with FDI goals."
+												</p>
+
+												<div class="h-px w-full bg-white/10"></div>
+
+												<div class="space-y-3">
+													<h5 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Key Takeaways</h5>
+													<ul class="space-y-3">
+														<li class="flex items-start gap-3">
+															<div class="h-1.5 w-1.5 rounded-full bg-bkpm-blue mt-1.5 shrink-0"></div>
+															<span class="text-xs text-slate-400 leading-relaxed">License processing time reduced by ~20% for renewable sectors.</span>
+														</li>
+														<li class="flex items-start gap-3">
+															<div class="h-1.5 w-1.5 rounded-full bg-logo-green mt-1.5 shrink-0"></div>
+															<span class="text-xs text-slate-400 leading-relaxed">New port connectivity increases supply chain reliability in the region.</span>
+														</li>
+													</ul>
+												</div>
+
+												<button class="w-full mt-4 bg-white/5 border border-white/10 hover:bg-white/10 text-white text-[10px] font-bold uppercase tracking-widest py-3 rounded-xl transition-all">
+													Generate Detailed Report
+												</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</section>
+
 						<!-- Institutional Section (Full Width Table) -->
 						<div class="space-y-6">
 							<div class="flex items-center gap-4 border-b border-slate-100 pb-5">
@@ -354,46 +444,30 @@
 							</div>
 							
 							{#if selectedRegion.offices.length > 0}
-								<div class="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
+								<div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
 									<div class="overflow-x-auto custom-scrollbar">
 										<table class="w-full text-left border-collapse">
 											<thead>
-												<tr class="bg-slate-50/50 border-b border-slate-100">
-													<th class="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Office Name</th>
-													<th class="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Address</th>
-													<th class="py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Contact Detail</th>
+												<tr class="border-b border-slate-100">
+													<th class="py-3 px-5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Office</th>
+													<th class="py-3 px-5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">Address</th>
+													<th class="py-3 px-5 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-right">Contact</th>
 												</tr>
 											</thead>
 											<tbody class="divide-y divide-slate-50">
-												{#each selectedRegion.offices as office}
+												{#each paginatedOffices.items as office, i (i)}
 													<tr class="hover:bg-slate-50/50 transition-all group">
-														<td class="py-6 px-8 align-top">
-															<div class="flex flex-col gap-2">
-																<span class="text-sm font-black text-slate-900 group-hover:text-logo-green transition-colors leading-snug">{office.nama}</span>
-																<div class="flex gap-2">
-																	<span class="px-2 py-0.5 bg-logo-green/10 text-logo-green text-[8px] font-black uppercase tracking-widest rounded-md border border-logo-green/20">DPMPTSP</span>
-																	<span class="px-2 py-0.5 bg-slate-100 text-slate-400 text-[8px] font-black uppercase tracking-widest rounded-md border border-slate-200">Official</span>
-																</div>
-															</div>
+														<td class="py-3 px-5 align-top">
+															<span class="text-xs font-semibold text-slate-900 group-hover:text-logo-green transition-colors leading-snug">{office.nama}</span>
 														</td>
-														<td class="py-6 px-8 align-top">
-															<div class="flex items-start gap-3 max-w-lg">
-																<div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0">
-																	<MapPin size={14} class="text-slate-300" />
-																</div>
-																<span class="text-xs font-medium text-slate-500 leading-relaxed" title={office.alamat}>{office.alamat || '-'}</span>
-															</div>
+														<td class="py-3 px-5 align-top">
+															<span class="text-[11px] text-slate-500 leading-relaxed line-clamp-2">{office.alamat || '-'}</span>
 														</td>
-														<td class="py-6 px-8 align-top text-right whitespace-nowrap">
+														<td class="py-3 px-5 align-top text-right whitespace-nowrap">
 															{#if office.telepon}
-																<div class="flex flex-col items-end gap-1.5">
-																	<div class="px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100 group-hover:bg-white group-hover:border-logo-green/20 group-hover:shadow-sm transition-all">
-																		<span class="text-sm font-black text-slate-900 tracking-wide">{office.telepon}</span>
-																	</div>
-																	<span class="text-[9px] font-black text-slate-300 uppercase tracking-widest">Available / Working Hours</span>
-																</div>
+																<span class="text-xs font-semibold text-slate-900">{office.telepon}</span>
 															{:else}
-																<span class="text-sm text-slate-300">No contact provided</span>
+																<span class="text-xs text-slate-300">—</span>
 															{/if}
 														</td>
 													</tr>
@@ -401,9 +475,37 @@
 											</tbody>
 										</table>
 									</div>
+
+									<!-- Pagination -->
+									{#if paginatedOffices.totalPages > 1}
+										<div class="flex items-center justify-between px-8 py-4 border-t border-slate-100">
+											<span class="text-xs text-slate-400">
+												Showing <span class="font-semibold text-slate-600">{paginatedOffices.start}–{paginatedOffices.end}</span> of <span class="font-semibold text-slate-600">{paginatedOffices.total}</span>
+											</span>
+											<div class="flex items-center gap-2">
+												<button
+													onclick={() => officePage = Math.max(0, officePage - 1)}
+													disabled={officePage === 0}
+													class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all {officePage === 0 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}"
+												>
+													<ChevronLeft size={14} />
+													Prev
+												</button>
+												<span class="text-xs font-semibold text-slate-500 px-2">{officePage + 1} / {paginatedOffices.totalPages}</span>
+												<button
+													onclick={() => officePage = Math.min(paginatedOffices.totalPages - 1, officePage + 1)}
+													disabled={officePage >= paginatedOffices.totalPages - 1}
+													class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all {officePage >= paginatedOffices.totalPages - 1 ? 'text-slate-300 cursor-not-allowed' : 'text-slate-600 hover:bg-slate-100'}"
+												>
+													Next
+													<ChevronRight size={14} />
+												</button>
+											</div>
+										</div>
+									{/if}
 								</div>
 							{:else}
-								<div class="py-20 rounded-[40px] border-2 border-dashed border-slate-100 bg-slate-50/50 flex flex-col items-center justify-center text-center">
+								<div class="py-20 rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50/50 flex flex-col items-center justify-center text-center">
 									<div class="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-200 mb-4">
 										<MapPin size={32} />
 									</div>
@@ -414,6 +516,15 @@
 
 					</div>
 				</div>
+			</div>
+		{:else}
+			<!-- Loading State -->
+			<div class="flex-1 flex flex-col items-center justify-center text-center p-16">
+				<div class="w-14 h-14 rounded-2xl bg-bkpm-blue/10 flex items-center justify-center text-bkpm-blue mb-6">
+					<Loader2 size={24} class="animate-spin" />
+				</div>
+				<h3 class="text-lg font-semibold text-slate-900 mb-2">Loading Regional Data</h3>
+				<p class="text-sm text-slate-400 max-w-sm">Fetching investment opportunities, infrastructure data, and institutional contacts…</p>
 			</div>
 		{/if}
 	</div>

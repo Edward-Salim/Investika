@@ -18,135 +18,109 @@ export const load: PageServerLoad = async () => {
     try {
         if (!db) return { provinces: getMockProvinces().map(p => ({ ...p, projects: getMockProjects(2) })) };
 
-        // Fetch provinces
-        let provinces: any[] = [];
-        try {
-            provinces = await db.query.admProvinces.findMany({
+        // Fire ALL queries in parallel to minimize total round-trip time
+        const [
+            provResult,
+            countResult,
+            popResult,
+            umrResult,
+            pdrbResult,
+            profileResult,
+            officeResult,
+            infraResult,
+            sectorResult,
+            projectResult
+        ] = await Promise.allSettled([
+            db.query.admProvinces.findMany({
                 orderBy: (provinces, { asc }) => [asc(provinces.nama)]
+            }),
+            db.select({
+                id_adm_provinsi: investmentOpportunities.id_adm_provinsi,
+                count: sql<number>`count(*)::int`
+            }).from(investmentOpportunities).groupBy(investmentOpportunities.id_adm_provinsi),
+            db.select().from(regionalPopulation)
+                .where(and(eq(regionalPopulation.region_type, 'province'), eq(regionalPopulation.tahun, 2024))),
+            db.select().from(regionalUmr)
+                .where(and(eq(regionalUmr.region_type, 'province'), eq(regionalUmr.tahun, 2025))),
+            db.select().from(regionalPdrb)
+                .where(and(eq(regionalPdrb.region_type, 'province'), eq(regionalPdrb.tahun, 2024))),
+            db.select().from(regionalProfiles)
+                .where(eq(regionalProfiles.region_type, 'province')),
+            db.query.regionalOffices.findMany(),
+            db.query.regionalInfrastructureItems.findMany(),
+            db.query.regionalInvestmentBySector.findMany(),
+            db.query.investmentOpportunities.findMany({ with: { details: true } })
+        ]);
+
+        // Process results with graceful fallbacks
+        const provinces = provResult.status === 'fulfilled' ? provResult.value : getMockProvinces();
+
+        const countMap: Record<number, number> = {};
+        if (countResult.status === 'fulfilled') {
+            countResult.value.forEach((c: any) => { countMap[c.id_adm_provinsi] = c.count; });
+        }
+
+        const popMap: Record<number, number> = {};
+        if (popResult.status === 'fulfilled') {
+            popResult.value.forEach((p: any) => { popMap[p.id_adm_provinsi] = (p.jumlah_pria || 0) + (p.jumlah_wanita || 0); });
+        }
+
+        const umrMap: Record<number, any> = {};
+        if (umrResult.status === 'fulfilled') {
+            umrResult.value.forEach((u: any) => { umrMap[u.id_adm_provinsi] = u.nilai; });
+        }
+
+        const pdrbMap: Record<number, any> = {};
+        if (pdrbResult.status === 'fulfilled') {
+            pdrbResult.value.forEach((p: any) => { pdrbMap[p.id_adm_provinsi] = p.nilai; });
+        }
+
+        const profileMap: Record<number, any> = {};
+        if (profileResult.status === 'fulfilled') {
+            profileResult.value.forEach((p: any) => {
+                profileMap[p.id_adm_provinsi] = {
+                    deskripsi: p.deskripsi, profil: p.profil,
+                    banner_url: p.banner_url, icon_url: p.icon_url
+                };
             });
-        } catch (e) {
-            console.error('Failed to fetch provinces, using mocks:', e);
-            provinces = getMockProvinces();
         }
 
-        // Project counts
-        let countMap: Record<number, number> = {};
-        try {
-            const counts = await db
-                .select({
-                    id_adm_provinsi: investmentOpportunities.id_adm_provinsi,
-                    count: sql<number>`count(*)::int`
-                })
-                .from(investmentOpportunities)
-                .groupBy(investmentOpportunities.id_adm_provinsi);
-            countMap = Object.fromEntries(counts.map(c => [c.id_adm_provinsi, c.count]));
-        } catch (e) {
-            console.error('Failed to fetch project counts:', e);
-        }
-
-        // Latest Population (2024)
-        let popMap: Record<number, number> = {};
-        try {
-            const populations = await db
-                .select()
-                .from(regionalPopulation)
-                .where(and(eq(regionalPopulation.region_type, 'province'), eq(regionalPopulation.tahun, 2024)));
-            popMap = Object.fromEntries(populations.map(p => [p.id_adm_provinsi, (p.jumlah_pria || 0) + (p.jumlah_wanita || 0)]));
-        } catch (e) {}
-
-        // Latest UMR (2025)
-        let umrMap: Record<number, any> = {};
-        try {
-            const umrs = await db
-                .select()
-                .from(regionalUmr)
-                .where(and(eq(regionalUmr.region_type, 'province'), eq(regionalUmr.tahun, 2025)));
-            umrMap = Object.fromEntries(umrs.map(u => [u.id_adm_provinsi, u.nilai]));
-        } catch (e) {}
-
-        // Latest PDRB (2024)
-        let pdrbMap: Record<number, any> = {};
-        try {
-            const pdrbs = await db
-                .select()
-                .from(regionalPdrb)
-                .where(and(eq(regionalPdrb.region_type, 'province'), eq(regionalPdrb.tahun, 2024)));
-            pdrbMap = Object.fromEntries(pdrbs.map(p => [p.id_adm_provinsi, p.nilai]));
-        } catch (e) {}
-
-        // Regional Profiles
-        let profileMap: Record<number, any> = {};
-        try {
-            const profiles = await db
-                .select()
-                .from(regionalProfiles)
-                .where(eq(regionalProfiles.region_type, 'province'));
-            profileMap = Object.fromEntries(profiles.map(p => [p.id_adm_provinsi, { 
-                deskripsi: p.deskripsi, 
-                profil: p.profil,
-                banner_url: p.banner_url,
-                icon_url: p.icon_url
-            }]));
-        } catch (e) {}
-
-        // Regional Offices
         const officeMap: Record<number, any[]> = {};
-        try {
-            const offices = await db.query.regionalOffices.findMany();
-            offices.forEach((o: any) => {
+        if (officeResult.status === 'fulfilled') {
+            officeResult.value.forEach((o: any) => {
                 if (o.id_adm_provinsi) {
                     if (!officeMap[o.id_adm_provinsi]) officeMap[o.id_adm_provinsi] = [];
-                    officeMap[o.id_adm_provinsi].push({
-                        nama: o.nama,
-                        alamat: o.alamat,
-                        telepon: o.no_telp
-                    });
+                    officeMap[o.id_adm_provinsi].push({ nama: o.nama, alamat: o.alamat, telepon: o.no_telp });
                 }
             });
-        } catch (e) {}
+        }
 
-        // Infrastructure
         const infraMap: Record<number, any[]> = {};
-        try {
-            const infra = await db.query.regionalInfrastructureItems.findMany();
-            infra.forEach((i: any) => {
+        if (infraResult.status === 'fulfilled') {
+            infraResult.value.forEach((i: any) => {
                 if (i.id_adm_provinsi) {
                     if (!infraMap[i.id_adm_provinsi]) infraMap[i.id_adm_provinsi] = [];
                     infraMap[i.id_adm_provinsi].push(i);
                 }
             });
-        } catch (e) {}
+        }
 
-        // Sector Investment
         const sectorInvMap: Record<number, any[]> = {};
-        try {
-            const sectorInv = await db.query.regionalInvestmentBySector.findMany();
-            sectorInv.forEach((s: any) => {
+        if (sectorResult.status === 'fulfilled') {
+            sectorResult.value.forEach((s: any) => {
                 if (s.id_adm_provinsi) {
                     if (!sectorInvMap[s.id_adm_provinsi]) sectorInvMap[s.id_adm_provinsi] = [];
-                    sectorInvMap[s.id_adm_provinsi].push({
-                        sektor: s.nama_sektor,
-                        nilai: s.jumlah_investasi
-                    });
+                    sectorInvMap[s.id_adm_provinsi].push({ sektor: s.nama_sektor, nilai: s.jumlah_investasi });
                 }
             });
-        } catch (e) {}
+        }
 
-        // Projects grouped by province
         const projectsByProvince: Record<number, any[]> = {};
-        try {
-            const allProjects = await db.query.investmentOpportunities.findMany({
-                with: {
-                    details: true
-                }
-            });
-            allProjects.forEach((p: any) => {
+        if (projectResult.status === 'fulfilled') {
+            projectResult.value.forEach((p: any) => {
                 if (p.id_adm_provinsi) {
                     if (!projectsByProvince[p.id_adm_provinsi]) projectsByProvince[p.id_adm_provinsi] = [];
-                    
-                    // Enrich with mock data
                     const enriched = enrichProjectWithMockData(p);
-                    
                     projectsByProvince[p.id_adm_provinsi].push({
                         id: enriched.id_peluang,
                         title: enriched.nama,
@@ -159,10 +133,8 @@ export const load: PageServerLoad = async () => {
                     });
                 }
             });
-        } catch (e) {
-            console.error('Failed to fetch projects for regions:', e);
-            // If DB failed, we can populate with some mock projects for the mock provinces
-            provinces.forEach(p => {
+        } else {
+            provinces.forEach((p: any) => {
                 projectsByProvince[p.id_adm_provinsi] = getMockProjects(2);
             });
         }
