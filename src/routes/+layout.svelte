@@ -11,10 +11,10 @@
 
 	import './layout.css';
 	import { Gb, Id, Cn, Jp, Kr } from 'svelte-flag-icons';
-	import { Home, Menu, User, ChevronDown, ChevronRight, BookOpen, Map, LogOut, ArrowRight, BrainCircuit, Plus } from 'lucide-svelte';
+	import { Home, Menu, User, ChevronDown, ChevronRight, BookOpen, Map, LogOut, ArrowRight, BrainCircuit, Plus, BookText } from 'lucide-svelte';
 	import { page } from '$app/state';
 	import { settingsStore } from '$lib/state/settings.svelte.js';
-	import { searchStore } from '$lib/state/search.svelte.js';
+	import { resetSearchStore, searchStore } from '$lib/state/search.svelte.js';
 	import { compareStore } from '$lib/state/compare.svelte';
 	import logoWhite from '$lib/assets/investika-white.png';
 	import investikaBlue from '$lib/assets/investika-blue.png';
@@ -34,6 +34,12 @@
 	let isProfileMenuOpen = $state(false);
 	let isAuthPage = $derived(page.url.pathname === '/login' || page.url.pathname === '/onboarding');
 	let pathSegments = $derived(page.url.pathname.split('/').filter(Boolean));
+	let isOverviewPage = $derived(
+		page.url.pathname === '/' ||
+		/^\/(id|zh|ja|ko)$/.test(page.url.pathname) ||
+		/^\/(id|zh|ja|ko)?\/?project\/[^/]+$/.test(page.url.pathname) ||
+		/^\/project\/[^/]+$/.test(page.url.pathname)
+	);
 </script>
 
 <svelte:head>
@@ -59,7 +65,7 @@
 			<button 
 				class="flex items-center group cursor-pointer border-none bg-transparent p-0 focus:outline-none" 
 				onclick={() => { 
-					searchStore.resetSearch(); 
+					resetSearchStore();
 					if (window.location.pathname !== '/') window.location.href = '/';
 				}}
 			>
@@ -77,11 +83,12 @@
 
 		<!-- Nav -->
 		<nav class="mt-1 flex-1 space-y-1 px-2.5 overflow-hidden">
+			<!-- 1. Overview -->
 			<a
 				href={localizeUrl('/', { locale: getLocale() }).pathname}
 				title="Home"
 				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
-					{page.url.pathname === '/' || page.url.pathname.match(/^\/(id|zh|ja|ko)$/) ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+					{isOverviewPage ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
 				class:justify-center={!isSidebarOpen}
 				class:px-0={!isSidebarOpen}
 			>
@@ -89,30 +96,14 @@
 					size={18}
 					strokeWidth={2.5}
 					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
-						{page.url.pathname === '/' || page.url.pathname.match(/^\/(id|zh|ja|ko)$/) ? 'text-white' : 'text-white/70 group-hover:text-white'}"
+						{isOverviewPage ? 'text-white' : 'text-white/70 group-hover:text-white'}"
 				/>
 				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
 					{m.nav_overview()}
 				</span>
 			</a>
-			<a
-				href="/policies"
-				title="Policies"
-				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
-					{page.url.pathname === '/policies' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
-				class:justify-center={!isSidebarOpen}
-				class:px-0={!isSidebarOpen}
-			>
-				<BookOpen
-					size={18}
-					strokeWidth={2.5}
-					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
-						{page.url.pathname === '/policies' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
-				/>
-				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
-					{m.nav_policies()}
-				</span>
-			</a>
+
+			<!-- 2. Regions -->
 			<a
 				href="/regions"
 				title="Regions"
@@ -131,6 +122,8 @@
 					Regions
 				</span>
 			</a>
+
+			<!-- 3. AI Compare -->
 			<a
 				href="/compare"
 				title="AI Compare"
@@ -158,6 +151,50 @@
 					{/if}
 				</span>
 			</a>
+
+			<div class="py-2 opacity-10"><div class="h-px bg-white"></div></div>
+
+			<!-- 4. Policies -->
+			<a
+				href="/policies"
+				title="Policies"
+				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
+					{page.url.pathname === '/policies' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+				class:justify-center={!isSidebarOpen}
+				class:px-0={!isSidebarOpen}
+			>
+				<BookOpen
+					size={18}
+					strokeWidth={2.5}
+					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
+						{page.url.pathname === '/policies' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
+				/>
+				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
+					{m.nav_policies()}
+				</span>
+			</a>
+
+			<!-- 5. Wiki -->
+			<a
+				href="/wiki"
+				title="Wiki"
+				class="group flex items-center rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap
+					{page.url.pathname === '/wiki' ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}"
+				class:justify-center={!isSidebarOpen}
+				class:px-0={!isSidebarOpen}
+			>
+				<BookText
+					size={18}
+					strokeWidth={2.5}
+					class="shrink-0 transition-colors {!isSidebarOpen ? '' : 'mr-3'}
+						{page.url.pathname === '/wiki' ? 'text-white' : 'text-white/50 group-hover:text-white'}"
+				/>
+				<span class="transition-opacity duration-300" class:opacity-0={!isSidebarOpen} class:w-0={!isSidebarOpen}>
+					Wiki
+				</span>
+			</a>
+
+			<!-- 6. Submit Project -->
 			<a
 				href="/submit"
 				title="Submit Project"
@@ -224,8 +261,10 @@
 
 				<!-- Breadcrumbs -->
 				<div class="hidden md:flex items-center text-[10px] font-black uppercase tracking-widest text-slate-400">
-					<!-- Always show Dashboard first -->
-					<a href="/" class="hover:text-slate-600 transition-colors {pathSegments.length === 0 ? 'text-bkpm-blue' : ''}">Dashboard</a>
+					<!-- Always show Dashboard first (removed per request) -->
+					{#if pathSegments.length === 0}
+						<span class="text-bkpm-blue">Dashboard</span>
+					{/if}
 					
 					{#if pathSegments.length > 0}
 						<ChevronRight size={12} class="mx-1.5 text-slate-300" strokeWidth={3} />

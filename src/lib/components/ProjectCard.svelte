@@ -61,7 +61,7 @@
 			<img
 				src={safeUrl(project.image)}
 				alt={project.title}
-				class="h-full w-full object-cover"
+				class="absolute inset-0 h-full w-full object-cover"
 				onerror={(e) => (e.currentTarget as HTMLImageElement).classList.add('hidden')}
 			/>
 		{:else}
@@ -153,7 +153,7 @@
 						goto(`/regions?id=${project.provinceId}`);
 					}
 				}}
-				class="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-2 hover:text-bkpm-blue transition-colors cursor-pointer text-left w-fit relative z-30"
+				class="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-2 hover:text-bkpm-blue transition-colors cursor-pointer text-left w-fit"
 				role="button"
 				tabindex="0"
 			>

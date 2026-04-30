@@ -51,17 +51,28 @@
 	let imageError = $state(false);
 	let isExpanded = $state(false);
 	let activeGallerySlide = $state(0);
+	let activeContactSlide = $state(0);
+	let expandedInfographic = $state<string | null>(null);
 	let currentView: 'info' | 'gallery' = $state('info');
 
-	let infographics = $derived.by(() => {
+	const isImageAsset = (url: unknown) =>
+		typeof url === 'string' && /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url);
+
+	let galleryImages = $derived.by(() => {
+		if (!project?.galleries) return [];
+		return [
+			...new Set(
+				project.galleries.map((g: any) => g.image_url).filter((url: unknown) => typeof url === 'string')
+			)
+		] as string[];
+	});
+
+	let infographicImages = $derived.by(() => {
 		let items: string[] = [];
-		if (project?.galleries) {
-			items = [...project.galleries.map((g: any) => g.image_url).filter(Boolean)] as string[];
-		}
 		if (project?.infos) {
 			const infoImages = project.infos
 				.map((i: any) => i.url_rest || i.nama)
-				.filter((url: any) => url && typeof url === 'string' && url.match(/\.(jpeg|jpg|gif|png)$/i)) as string[];
+				.filter((url: unknown) => isImageAsset(url)) as string[];
 			items = [...items, ...infoImages];
 		}
 		return [...new Set(items)];
@@ -71,17 +82,42 @@
 		if (!project?.infos) return [];
 		return project.infos.filter((i: any) => {
 			const url = i.url_rest || i.nama;
-			return !(url && typeof url === 'string' && url.match(/\.(jpeg|jpg|gif|png)$/i));
+			return !isImageAsset(url);
 		});
 	});
 
+	let contacts = $derived(project?.contacts ?? []);
+	let activeContact = $derived(contacts[activeContactSlide] ?? null);
+	let expandedInfographicIndex = $derived(
+		expandedInfographic ? infographicImages.findIndex((img) => img === expandedInfographic) : -1
+	);
+	let formattedLastUpdated = $derived.by(() => {
+		if (!project?.fetched_at) return null;
+		const date = new Date(project.fetched_at);
+		if (Number.isNaN(date.getTime())) return null;
+		return new Intl.DateTimeFormat('en-US', {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric'
+		}).format(date);
+	});
+
+	const startAutoSlide = (length: number, update: () => void) => {
+		if (length <= 1) return;
+		const interval = setInterval(update, 4000);
+		return () => clearInterval(interval);
+	};
+
 	onMount(() => {
-		if (infographics.length > 1) {
-			const interval = setInterval(() => {
-				activeGallerySlide = (activeGallerySlide + 1) % infographics.length;
-			}, 4000);
-			return () => clearInterval(interval);
-		}
+		const cleanups = [
+			startAutoSlide(galleryImages.length, () => {
+				activeGallerySlide = (activeGallerySlide + 1) % galleryImages.length;
+			})
+		].filter(Boolean);
+
+		return () => {
+			for (const cleanup of cleanups) cleanup?.();
+		};
 	});
 </script>
 
@@ -94,7 +130,7 @@
 			<img 
 				src={safeUrl(project.image_url)} 
 				alt={project.nama} 
-				class="w-full h-full object-cover opacity-60"
+				class="absolute inset-0 w-full h-full object-cover opacity-60"
 				onerror={() => imageError = true}
 			/>
 		{:else}
@@ -344,57 +380,88 @@
 
 				{#if currentView === 'gallery'}
 				<div in:fade={{ duration: 300, delay: 150 }} class="space-y-12">
-					<!-- Project Infographics Carousel -->
-					{#if infographics && infographics.length > 0}
+					{#if galleryImages.length > 0}
 					<section>
 						<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
 							<Image size={20} class="mr-2 text-bkpm-blue" />
-							Project Infographics
+							Project Galleries
 						</h3>
 						
 						<div class="relative rounded-3xl overflow-hidden bg-slate-900 aspect-video md:aspect-[21/9] group shadow-sm border border-slate-200">
-							{#each infographics as imgUrl, i}
+							{#each galleryImages as imgUrl, i}
 								<div class="absolute inset-0 transition-opacity duration-1000 ease-in-out {i === activeGallerySlide ? 'opacity-100 z-10' : 'opacity-0 z-0'}">
 									<img 
 										src={safeUrl(imgUrl)} 
-										alt="Project Infographic {i + 1}" 
+										alt="Project Gallery {i + 1}" 
 										class="w-full h-full object-cover"
 									/>
 								</div>
 							{/each}
 							
-							<!-- Indicators & Navigation -->
-							{#if infographics.length > 1}
-							<!-- Navigation Arrows -->
+							{#if galleryImages.length > 1}
 							<button 
 								class="absolute left-4 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur-md transition-colors cursor-pointer border border-white/10 opacity-0 group-hover:opacity-100"
-								onclick={() => activeGallerySlide = (activeGallerySlide - 1 + infographics.length) % infographics.length}
-								aria-label="Previous slide"
+								onclick={() => activeGallerySlide = (activeGallerySlide - 1 + galleryImages.length) % galleryImages.length}
+								aria-label="Previous gallery slide"
 							>
 								<ChevronLeft size={20} strokeWidth={2.5} />
 							</button>
 
 							<button 
 								class="absolute right-4 top-1/2 -translate-y-1/2 z-30 h-10 w-10 rounded-full bg-black/30 hover:bg-black/50 text-white flex items-center justify-center backdrop-blur-md transition-colors cursor-pointer border border-white/10 opacity-0 group-hover:opacity-100"
-								onclick={() => activeGallerySlide = (activeGallerySlide + 1) % infographics.length}
-								aria-label="Next slide"
+								onclick={() => activeGallerySlide = (activeGallerySlide + 1) % galleryImages.length}
+								aria-label="Next gallery slide"
 							>
 								<ChevronRight size={20} strokeWidth={2.5} />
 							</button>
 
 							<div class="absolute bottom-6 left-0 right-0 z-20 flex justify-center gap-2">
-								{#each infographics as _, i}
+								{#each galleryImages as _, i}
 									<button 
 										class="h-2 rounded-full transition-all duration-300 cursor-pointer {i === activeGallerySlide ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}"
 										onclick={() => activeGallerySlide = i}
-										aria-label="Go to slide {i + 1}"
+										aria-label="Go to gallery slide {i + 1}"
 									></button>
 								{/each}
 							</div>
 							{/if}
 						</div>
 					</section>
-					{:else}
+					{/if}
+
+					{#if infographicImages.length > 0}
+					<section>
+						<h3 class="text-xl font-black text-slate-900 tracking-tight mb-5 flex items-center">
+							<Image size={20} class="mr-2 text-bkpm-blue" />
+							Project Infographics
+						</h3>
+						
+						<div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+							{#each infographicImages as imgUrl, i}
+								<button
+									type="button"
+									onclick={() => expandedInfographic = imgUrl}
+									class="group overflow-hidden rounded-3xl border border-slate-200 bg-white text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-200/40 cursor-zoom-in"
+								>
+									<div class="bg-slate-100 p-3">
+										<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+											<img 
+												src={safeUrl(imgUrl)} 
+												alt="Project Infographic {i + 1}" 
+												class="h-[26rem] w-full object-contain"
+											/>
+										</div>
+									</div>
+									<div class="flex items-center justify-between border-t border-slate-100 px-4 py-3">
+										<div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Infographic {i + 1}</div>
+									</div>
+								</button>
+							{/each}
+						</div>
+					</section>
+					{/if}
+
+					{#if galleryImages.length === 0 && infographicImages.length === 0}
 					<div class="py-20 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
 						<Image size={48} strokeWidth={1} class="mx-auto text-slate-300 mb-4" />
 						<p class="text-slate-500 font-medium">No media available for this project.</p>
@@ -413,23 +480,19 @@
 					<div class="flex items-center p-1.5 bg-slate-100/80 backdrop-blur-md border border-slate-200/50 rounded-full mb-6 relative shadow-inner">
 						<div class="absolute inset-y-1.5 w-[calc(50%-6px)] bg-white rounded-full shadow-sm transition-all duration-300 ease-out {currentView === 'gallery' ? 'left-[calc(50%+3px)]' : 'left-1.5'}"></div>
 						<button 
-							class="flex-1 py-3 px-4 rounded-full text-[10px] font-black uppercase tracking-widest relative z-10 transition-colors {currentView === 'info' ? 'text-bkpm-blue' : 'text-slate-500 hover:text-slate-700'}"
+							class="flex-1 cursor-pointer py-3 px-4 rounded-full text-[10px] font-black uppercase tracking-widest relative z-10 transition-colors {currentView === 'info' ? 'text-bkpm-blue' : 'text-slate-500 hover:text-slate-700'}"
 							onclick={() => currentView = 'info'}
 						>
 							Info View
 						</button>
 						<button 
-							class="flex-1 py-3 px-4 rounded-full text-[10px] font-black uppercase tracking-widest relative z-10 transition-colors {currentView === 'gallery' ? 'text-bkpm-blue' : 'text-slate-500 hover:text-slate-700'}"
+							class="flex-1 cursor-pointer py-3 px-4 rounded-full text-[10px] font-black uppercase tracking-widest relative z-10 transition-colors {currentView === 'gallery' ? 'text-bkpm-blue' : 'text-slate-500 hover:text-slate-700'}"
 							onclick={() => currentView = 'gallery'}
 						>
 							Gallery View
 						</button>
 					</div>
 					<div class="bg-white rounded-[32px] border border-slate-200 shadow-xl shadow-slate-200/50 p-8">
-					<h3 class="text-[10px] font-black uppercase tracking-wide text-slate-400 mb-6 flex items-center">
-						{m.proj_factsheet()}
-					</h3>
-
 					<div class="space-y-6">
 						<!-- CAPEX -->
 						<div>
@@ -464,31 +527,64 @@
 							</div>
 						</div>
 
+						{#if formattedLastUpdated}
+						<div class="h-[1px] w-full bg-slate-100"></div>
+						<div>
+							<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Last updated</div>
+							<div class="text-sm font-black text-slate-800">{formattedLastUpdated}</div>
+						</div>
+						{/if}
+
 
 						<!-- Contacts -->
-						{#if project.contacts && project.contacts.length > 0}
+						{#if contacts.length > 0}
 						<div class="h-[1px] w-full bg-slate-100 mt-8 mb-8"></div>
 						<div class="space-y-4">
-							<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-4">Project Contacts</div>
-							{#each project.contacts as contact}
+							<div class="flex items-center justify-between gap-3">
+								<div class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Project Contacts</div>
+								{#if contacts.length > 1}
+									<div class="flex items-center gap-2">
+										<span class="text-[10px] font-bold text-slate-400">{activeContactSlide + 1} / {contacts.length}</span>
+										<div class="flex items-center gap-1">
+											<button
+												type="button"
+												onclick={() => activeContactSlide = (activeContactSlide - 1 + contacts.length) % contacts.length}
+												class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-bkpm-blue/20 hover:text-bkpm-blue cursor-pointer"
+												aria-label="Previous contact"
+											>
+												<ChevronLeft size={14} strokeWidth={2.5} />
+											</button>
+											<button
+												type="button"
+												onclick={() => activeContactSlide = (activeContactSlide + 1) % contacts.length}
+												class="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-bkpm-blue/20 hover:text-bkpm-blue cursor-pointer"
+												aria-label="Next contact"
+											>
+												<ChevronRight size={14} strokeWidth={2.5} />
+											</button>
+										</div>
+									</div>
+								{/if}
+							</div>
+							{#if activeContact}
 								<div class="bg-slate-50/80 rounded-2xl p-5 border border-slate-100/60">
-									<div class="font-black text-[15px] leading-snug text-slate-900 mb-3">{contact.nama}</div>
+									<div class="font-black text-[15px] leading-snug text-slate-900 mb-3">{activeContact.nama}</div>
 									<div class="space-y-2">
-										{#if contact.email}
+										{#if activeContact.email}
 											<div class="text-[13px] flex items-start gap-2">
 												<span class="font-bold text-slate-400 w-12 shrink-0">Email:</span> 
-												<span class="text-slate-600 break-all">{contact.email}</span>
+												<span class="text-slate-600 break-all">{activeContact.email}</span>
 											</div>
 										{/if}
-										{#if contact.telepon}
+										{#if activeContact.telepon}
 											<div class="text-[13px] flex items-start gap-2">
 												<span class="font-bold text-slate-400 w-12 shrink-0">Phone:</span> 
-												<span class="text-slate-600">{contact.telepon}</span>
+												<span class="text-slate-600">{activeContact.telepon}</span>
 											</div>
 										{/if}
 									</div>
 								</div>
-							{/each}
+							{/if}
 						</div>
 						{/if}
 
@@ -515,3 +611,70 @@
 		</div>
 	</div>
 </div>
+
+{#if expandedInfographic}
+	<div
+		class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/90 p-6 cursor-zoom-out"
+		role="dialog"
+		aria-modal="true"
+		aria-label="Expanded project infographic viewer"
+		tabindex="0"
+		onclick={() => expandedInfographic = null}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') {
+				expandedInfographic = null;
+				return;
+			}
+			if (infographicImages.length <= 1) return;
+			if (e.key === 'ArrowLeft') {
+				expandedInfographic =
+					infographicImages[
+						(expandedInfographicIndex - 1 + infographicImages.length) % infographicImages.length
+					];
+			}
+			if (e.key === 'ArrowRight') {
+				expandedInfographic =
+					infographicImages[(expandedInfographicIndex + 1) % infographicImages.length];
+			}
+		}}
+	>
+		{#if infographicImages.length > 1}
+			<button
+				type="button"
+				class="absolute left-6 top-1/2 z-[121] flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20 cursor-pointer"
+				onclick={(e) => {
+					e.stopPropagation();
+					expandedInfographic =
+						infographicImages[
+							(expandedInfographicIndex - 1 + infographicImages.length) % infographicImages.length
+						];
+				}}
+				aria-label="Previous infographic"
+			>
+				<ChevronLeft size={22} strokeWidth={2.5} />
+			</button>
+
+			<button
+				type="button"
+				class="absolute right-6 top-1/2 z-[121] flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md transition-colors hover:bg-white/20 cursor-pointer"
+				onclick={(e) => {
+					e.stopPropagation();
+					expandedInfographic =
+						infographicImages[(expandedInfographicIndex + 1) % infographicImages.length];
+				}}
+				aria-label="Next infographic"
+			>
+				<ChevronRight size={22} strokeWidth={2.5} />
+			</button>
+		{/if}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div onclick={(e) => e.stopPropagation()}>
+			<img
+				src={safeUrl(expandedInfographic)}
+				alt="Expanded project infographic"
+				class="max-h-[90vh] max-w-[90vw] rounded-2xl bg-white object-contain shadow-2xl"
+			/>
+		</div>
+	</div>
+{/if}

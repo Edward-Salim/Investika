@@ -157,15 +157,11 @@
 
 				<!-- Bottom: Comparative Matrix (Full Width) -->
 				<div class="p-8 bg-white">
-					<div class="flex items-center justify-between mb-8">
+					<div class="mb-8">
 						<h3 class="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
 							<AlertTriangle size={14} class="text-slate-400" />
 							Structural Attribute Comparison
 						</h3>
-						
-						<button class="px-5 py-2 bg-slate-900 text-white rounded-lg text-[10px] font-bold hover:bg-slate-800 transition-colors shadow-sm">
-							Request Due Diligence
-						</button>
 					</div>
 					
 					<div class="overflow-x-auto custom-scrollbar -mx-8 px-8">

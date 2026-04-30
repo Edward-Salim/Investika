@@ -25,16 +25,6 @@
 		<div class="absolute right-0 top-0 w-1/3 h-full opacity-10 pointer-events-none bg-gradient-to-l from-bkpm-blue to-transparent"></div>
 		
 		<div class="max-w-7xl mx-auto px-6 lg:px-8 py-8 md:py-16 relative z-10">
-			<a href="/" class="inline-flex items-center text-xs font-bold text-slate-400 hover:text-bkpm-blue transition-colors uppercase tracking-wide mb-8">
-				<ArrowLeft size={14} strokeWidth={3} class="mr-2" />
-				{m.proj_back()}
-			</a>
-			
-			<div class="max-w-3xl">
-				<div class="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-xs font-black uppercase tracking-wide border border-slate-200 mb-6">
-					<Scale size={14} strokeWidth={3} />
-					<span>Regulatory Hub</span>
-				</div>
 				<h1 class="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] mb-6">
 					{m.policy_title()}
 				</h1>

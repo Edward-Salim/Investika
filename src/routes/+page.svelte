@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
-	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, Search, ChevronUp, LayoutGrid, Truck, Sprout, Cpu, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope, RotateCcw, Image } from 'lucide-svelte';
+	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, Search, ChevronUp, LayoutGrid, Truck, Sprout, Cpu, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope, RotateCcw, Image, Paperclip } from 'lucide-svelte';
 	import { fade, fly, slide } from 'svelte/transition';
 	import { cubicOut, cubicInOut } from 'svelte/easing';
 	import bkpmEmblem from '$lib/assets/logos/bkpm-emblem.png';
@@ -25,10 +25,19 @@
 	let activeFilter = $state(searchStore.activeFilter);
 	let isFilterOpen = $state(searchStore.isFilterOpen);
 	let isSectorDropdownOpen = $state(false);
-	let committedSearch = $state(''); // Only updates on submit, not on every keystroke
+	let committedSearch = $state(searchStore.committedSearch);
 	
 	let collapseTimeout: ReturnType<typeof setTimeout>;
 	let displayedProjects = $state<PageData['projects']>([]);
+
+	$effect(() => {
+		if (isSearching && searchStore.displayedProjects.length > 0) {
+			displayedProjects = searchStore.displayedProjects as PageData['projects'];
+			return;
+		}
+
+		displayedProjects = data.projects;
+	});
 
 	$effect(() => {
 		if (!isSearching) {
@@ -46,9 +55,8 @@
 	let riskProfile = $state<'all' | 'conservative' | 'balanced' | 'aggressive'>(searchStore.riskProfile);
 	let sortBy = $state<'default' | 'investment-asc' | 'investment-desc' | 'alpha' | 'irr-desc'>(searchStore.sortBy);
 
-	// Reactive check: if input is cleared, clear the committed search automatically
 	$effect(() => {
-		if (inputValue === '') {
+		if (!isSearching && inputValue === '') {
 			committedSearch = '';
 		}
 	});
@@ -91,6 +99,7 @@
 		searchStore.aiSummary = aiSummary;
 		searchStore.isAiSummaryExpanded = isAiSummaryExpanded;
 		searchStore.isSearching = isSearching;
+		searchStore.displayedProjects = displayedProjects;
 		searchStore.activeFilter = activeFilter;
 		searchStore.isFilterOpen = isFilterOpen;
 		searchStore.minInvestment = minInvestment;
@@ -176,14 +185,6 @@
 		{ id: 'wilayah indonesia bagian timur', label: 'Timur' }
 	];
 
-	const sortOptions = [
-		{ value: 'default', label: 'Default' },
-		{ value: 'investment-asc', label: 'Investment: Low → High' },
-		{ value: 'investment-desc', label: 'Investment: High → Low' },
-		{ value: 'irr-desc', label: 'Yield: High → Low' },
-		{ value: 'alpha', label: 'A → Z' },
-	] as const;
-
 	function toggleStatus(s: string) {
 		selectedStatuses = selectedStatuses.includes(s)
 			? selectedStatuses.filter(x => x !== s)
@@ -205,6 +206,30 @@
 		selectedRegions = [];
 		riskProfile = 'all';
 		sortBy = 'default';
+	}
+
+	function hasUsefulValue(value: unknown) {
+		if (value === null || value === undefined) return false;
+		if (typeof value === 'number') return Number.isFinite(value) && value > 0;
+		if (typeof value === 'string') {
+			const normalized = value.trim().toLowerCase();
+			return normalized !== '' && normalized !== 'tbd' && normalized !== 'nan' && normalized !== 'no data';
+		}
+		return true;
+	}
+
+	function getProjectCompletenessScore(project: any) {
+		let score = 0;
+
+		if (hasUsefulValue(project.image)) score += 4;
+		if (hasUsefulValue(project.investmentNum)) score += 3;
+		if (hasUsefulValue(project.irrNum)) score += 3;
+		if (hasUsefulValue(project.npvNum)) score += 2;
+		if (hasUsefulValue(project.location)) score += 1;
+		if (hasUsefulValue(project.status)) score += 1;
+		if (hasUsefulValue(project.category)) score += 1;
+
+		return score;
 	}
 
 	const allProjects = $derived(displayedProjects);
@@ -248,7 +273,19 @@
 				if (sortBy === 'investment-desc') return b.investmentNum - a.investmentNum;
 				if (sortBy === 'irr-desc') return b.irrNum - a.irrNum;
 				if (sortBy === 'alpha') return a.title.localeCompare(b.title);
-				return 0;
+
+				const completenessDelta = getProjectCompletenessScore(b) - getProjectCompletenessScore(a);
+				if (completenessDelta !== 0) return completenessDelta;
+
+				const irrDelta = (Number.isFinite(b.irrNum) ? b.irrNum : 0) - (Number.isFinite(a.irrNum) ? a.irrNum : 0);
+				if (irrDelta !== 0) return irrDelta;
+
+				const investmentDelta =
+					(Number.isFinite(b.investmentNum) ? b.investmentNum : 0) -
+					(Number.isFinite(a.investmentNum) ? a.investmentNum : 0);
+				if (investmentDelta !== 0) return investmentDelta;
+
+				return a.title.localeCompare(b.title);
 			})
 	);
 
@@ -330,6 +367,16 @@
 		isAiSummaryExpanded = false;
 	}
 
+	function openCatalogView() {
+		displayedProjects = data.projects;
+		aiSummary = '';
+		isAiSummaryExpanded = false;
+		committedSearch = '';
+		activeFilter = 'All';
+		clearAdvancedFilters();
+		isSearching = true;
+	}
+
 	function autosize(node: HTMLTextAreaElement) {
 		const update = () => {
 			node.style.height = 'auto';
@@ -375,12 +422,12 @@
 			<!-- Gradient border wrapper -->
 			<div class="gradient-border-wrap rounded-3xl p-[3px]">
 				<div class="flex items-center rounded-[21px] bg-white p-1 shadow-2xl shadow-slate-200/50 transition-all">
-					<textarea
+					<button type="button" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0" title="Attach File"><Paperclip size={18} strokeWidth={2.5} /></button><textarea
 						use:autosize
 						bind:value={inputValue}
 						onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSearch())}
 						placeholder={m.home_placeholder()}
-						class="flex-1 resize-none border-0 bg-transparent px-4 py-3 text-sm font-semibold text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-0 min-h-[48px] max-h-[96px] overflow-y-auto scrollbar-hide break-words"
+						class="flex-1 resize-none border-0 bg-transparent pl-2 pr-4 py-3 text-sm font-semibold text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-0 min-h-[48px] max-h-[96px] overflow-y-auto scrollbar-hide break-words"
 						style="word-break: break-word; overflow-wrap: anywhere;"
 						rows="1"
 					></textarea>
@@ -398,6 +445,14 @@
 			<!-- AI hint -->
 			<p class="mt-4 text-xs font-medium text-slate-400 text-center">
 				AI auto-filters projects based on your query.
+				<button
+					type="button"
+					onclick={openCatalogView}
+					class="ml-2 inline-flex cursor-pointer items-center gap-1 font-semibold text-bkpm-blue transition-colors hover:text-logo-green"
+				>
+					Browse catalog
+					<ArrowRight size={12} strokeWidth={3} />
+				</button>
 			</p>
 		</div>
 		</div>
@@ -416,10 +471,10 @@
 				<!-- Sector & Search Group -->
 				<div class="flex items-center gap-2 flex-1">
 					<!-- Sector Dropdown -->
-					<div class="relative shrink-0">
+					<div class="relative z-30 shrink-0">
 						<button
 							onclick={() => isSectorDropdownOpen = !isSectorDropdownOpen}
-							class="flex items-center h-11 gap-2.5 px-4 rounded-2xl text-xs font-black uppercase tracking-wide border border-slate-200 bg-white shadow-sm hover:border-bkpm-blue/40 transition-all cursor-pointer group"
+							class="group flex h-11 items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm shadow-slate-200/60 transition-all hover:border-bkpm-blue/40 cursor-pointer"
 						>
 							<activeDef.icon size={16} strokeWidth={2.5} class="transition-colors
 								{activeDef.tier === 'Primer' ? 'text-emerald-500 group-hover:text-emerald-600' : 
@@ -434,9 +489,10 @@
 						{#if isSectorDropdownOpen}
 							<!-- svelte-ignore a11y_click_events_have_key_events -->
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div class="fixed inset-0 z-10" onclick={() => isSectorDropdownOpen = false}></div>
+							<div class="fixed inset-0 z-40" onclick={() => isSectorDropdownOpen = false}></div>
 							<div 
-								class="absolute left-0 top-full mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-xl z-20 py-2 max-h-[50vh] overflow-y-auto"
+								class="absolute left-0 top-full z-50 mt-2 w-64 overflow-y-auto rounded-2xl border border-slate-100 bg-white py-2 shadow-2xl"
+								style="max-height: min(24rem, calc(100vh - 18rem));"
 								transition:slide={{ duration: 200, easing: cubicOut }}
 							>
 								<button 
@@ -484,7 +540,7 @@
 							type="text" 
 							bind:value={committedSearch}
 							placeholder="Search project..."
-							class="w-full h-11 pl-10 pr-4 rounded-2xl text-[11px] font-bold border border-slate-200 bg-white shadow-sm focus:outline-none focus:border-bkpm-blue/40 focus:ring-4 focus:ring-bkpm-blue/5 transition-all"
+							class="h-11 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 text-xs font-bold text-slate-700 shadow-sm shadow-slate-200/60 transition-all placeholder:text-slate-400 focus:outline-none focus:border-bkpm-blue/40 focus:ring-4 focus:ring-bkpm-blue/5"
 						/>
 					</div>
 				</div>
@@ -493,10 +549,12 @@
 
 	
 				<div class="flex items-center gap-2 shrink-0">
-					<span class="text-xs font-bold text-slate-400">{m.filter_projects_count({ count: filteredProjects.length })}</span>
+					<span class="px-1 text-xs font-black text-slate-500">
+						{m.filter_projects_count({ count: filteredProjects.length })}
+					</span>
 					<button
 						onclick={() => isFilterOpen = !isFilterOpen}
-						class="relative flex items-center h-11 gap-1.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-400 font-bold text-xs hover:border-bkpm-blue/40 hover:text-bkpm-blue transition-all cursor-pointer"
+						class="relative flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-xs font-black text-slate-500 shadow-sm shadow-slate-200/60 transition-all hover:border-bkpm-blue/40 hover:text-bkpm-blue cursor-pointer"
 					>
 						<SlidersHorizontal size={14} strokeWidth={2.5} />
 						{m.filter_advanced()}
@@ -509,7 +567,7 @@
 
 					<button 
 						onclick={clearAll}
-						class="flex items-center justify-center h-11 w-11 rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-bkpm-blue hover:border-bkpm-blue/40 shadow-sm transition-all cursor-pointer group shrink-0"
+						class="group flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm shadow-slate-200/60 transition-all hover:border-bkpm-blue/40 hover:text-bkpm-blue cursor-pointer"
 						title={m.filter_reset()}
 					>
 						<RotateCcw size={14} strokeWidth={2.5} class="group-hover:rotate-[-45deg] transition-transform" />
@@ -610,22 +668,6 @@
 							/>
 						</div>
 					</div>
-
-					<!-- Sort By -->
-					<div class="space-y-3">
-						<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Sort By</span>
-						<div class="relative">
-							<select 
-								bind:value={sortBy}
-								class="w-full appearance-none pl-3 pr-8 py-2 text-xs font-bold text-slate-700 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:border-bkpm-blue/30 focus:ring-2 focus:ring-bkpm-blue/10 transition-all cursor-pointer"
-							>
-								{#each sortOptions as opt}
-									<option value={opt.value}>{opt.label}</option>
-								{/each}
-							</select>
-							<ChevronDown size={12} class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" strokeWidth={3} />
-						</div>
-					</div>
 				</div>
 			</div>
 		{/if}
@@ -699,12 +741,12 @@
 				<button onclick={resetSearch} aria-label="Reset Search" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0">
 					<Home size={18} strokeWidth={2.5} />
 				</button>
-				<textarea
+				<button type="button" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0" title="Attach File"><Paperclip size={18} strokeWidth={2.5} /></button><textarea
 					use:autosize
 					bind:value={inputValue}
 					onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSearch())}
 					placeholder={m.home_placeholder()}
-					class="flex-1 resize-none border-0 bg-transparent px-4 py-2.5 text-sm font-semibold text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-0 min-h-[40px] max-h-[96px] overflow-y-auto scrollbar-hide break-words"
+					class="flex-1 resize-none border-0 bg-transparent pl-2 pr-4 py-2.5 text-sm font-semibold text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-0 min-h-[40px] max-h-[96px] overflow-y-auto scrollbar-hide break-words"
 					style="word-break: break-word; overflow-wrap: anywhere;"
 					rows="1"
 				></textarea>

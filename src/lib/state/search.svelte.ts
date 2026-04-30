@@ -7,6 +7,7 @@ const initialState = {
 	inputValue: '',
 	aiSummary: '',
 	isAiSummaryExpanded: false,
+	displayedProjects: [] as any[],
 	activeFilter: 'All',
 	isFilterOpen: false,
 	minInvestment: 0,
@@ -42,5 +43,5 @@ if (browser) {
 }
 
 export function resetSearchStore() {
-    Object.assign(searchStore, initialState);
+	Object.assign(searchStore, initialState);
 }
