@@ -41,6 +41,7 @@
 	let loadMoreSentinel = $state<HTMLDivElement | null>(null);
 	let loadMoreObserver: IntersectionObserver | null = null;
 	let resultsScrollContainer = $state<HTMLDivElement | null>(null);
+	const DEFAULT_MAX_INVESTMENT = 1_000_000_000_000_000;
 
 	$effect(() => {
 		if (catalogProjects.length === 0 && serverProjects.length > 0) {
@@ -343,7 +344,7 @@
 
 	function clearAdvancedFilters() {
 		minInvestment = 0;
-		maxInvestment = 100000;
+		maxInvestment = DEFAULT_MAX_INVESTMENT;
 		minIRR = 0;
 		maxIRR = 30;
 		selectedStatuses = [];
@@ -388,7 +389,7 @@
 		selectedRegions.length > 0 ||
 		sortBy !== 'default' ||
 		minInvestment > 0 ||
-		maxInvestment < 100000 ||
+		maxInvestment < DEFAULT_MAX_INVESTMENT ||
 		minIRR > 0
 	);
 
@@ -396,7 +397,7 @@
 		(selectedStatuses.length > 0 ? 1 : 0) +
 		(selectedRegions.length > 0 ? 1 : 0) +
 		(sortBy !== 'default' ? 1 : 0) +
-		(minInvestment > 0 || maxInvestment < 100000 ? 1 : 0)
+		(minInvestment > 0 || maxInvestment < DEFAULT_MAX_INVESTMENT ? 1 : 0)
 	);
 
 	const filteredProjects = $derived(

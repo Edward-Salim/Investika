@@ -68,6 +68,9 @@ Field selection rules:
 - For coded_text fields, avoid using them unless the user explicitly asks for the raw code.
 - For text and categorical_text fields, prefer "ilike" for user-entered search phrases.
 - For number fields, use only "eq", "gte", or "lte".
+- For investment value, NPV, and IRR constraints or ranking, use only these normalized numeric fields: investment_opportunities.nilai_investasi_amount, investment_opportunities.nilai_npv_amount, and investment_opportunities.nilai_irr_percent.
+- Never use these raw text display fields for numeric filtering or sorting: investment_opportunities.nilai_investasi, investment_opportunities.nilai_npv, or investment_opportunities.nilai_irr.
+- Treat investment value and NPV amounts as IDR by default unless the user explicitly asks for another currency or conversion behavior.
 - For boolean fields, use only "eq" with true or false.
 - If the user asks for a concept that maps to a documented enum member, choose that member exactly.
 - If the user asks for a concept but no documented field or allowed value supports it, leave that filter out rather than guessing.

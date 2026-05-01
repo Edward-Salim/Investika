@@ -114,7 +114,6 @@ export const approvedProjectSearchFields: readonly ProjectSearchFieldSummary[] =
 			'Industri',
 			'PARIWISATA',
 			'PERINDUSTRIAN',
-			'Pariwisata',
 			'Agro Industri',
 			'Infrastruktur',
 			'PERTANIAN',
@@ -169,21 +168,24 @@ export const approvedProjectSearchFields: readonly ProjectSearchFieldSummary[] =
 		type: 'number',
 		description: 'Normalized investment value amount.',
 		recommendedOperators: ['gte', 'lte', 'eq'],
-		usage: 'Use numeric comparisons only.'
+		usage:
+			'Use numeric comparisons only. This is the numeric field for investment value filters and sorting. Treat the amount as IDR by default unless the user explicitly asks for another currency or conversion behavior. Do not use the raw text field investment_opportunities.nilai_investasi for numeric logic.'
 	},
 	{
 		field: 'investment_opportunities.nilai_irr_percent',
 		type: 'number',
 		description: 'Normalized IRR percentage.',
 		recommendedOperators: ['gte', 'lte', 'eq'],
-		usage: 'Use numeric comparisons only.'
+		usage:
+			'Use numeric comparisons only. This is the numeric field for IRR filters and sorting. Do not use the raw text field investment_opportunities.nilai_irr for numeric logic.'
 	},
 	{
 		field: 'investment_opportunities.nilai_npv_amount',
 		type: 'number',
 		description: 'Normalized NPV amount.',
 		recommendedOperators: ['gte', 'lte', 'eq'],
-		usage: 'Use numeric comparisons only.'
+		usage:
+			'Use numeric comparisons only. This is the numeric field for NPV filters and sorting. Treat the amount as IDR by default unless the user explicitly asks for another currency or conversion behavior. Do not use the raw text field investment_opportunities.nilai_npv for numeric logic.'
 	},
 	{
 		field: 'adm_provinces.nama',

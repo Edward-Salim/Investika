@@ -1,6 +1,7 @@
 import { browser } from '$app/environment';
 
 const STORAGE_KEY = 'investika_search_state';
+const DEFAULT_MAX_INVESTMENT = 1_000_000_000_000_000;
 
 const initialState = {
 	isSearching: false,
@@ -12,7 +13,7 @@ const initialState = {
 	activeFilter: 'All',
 	isFilterOpen: false,
 	minInvestment: 0,
-	maxInvestment: 100000,
+	maxInvestment: DEFAULT_MAX_INVESTMENT,
 	selectedStatuses: [] as string[],
 	selectedRegions: [] as string[],
 	minIRR: 0,
@@ -49,7 +50,19 @@ function loadState() {
 	const saved = localStorage.getItem(STORAGE_KEY);
 	if (!saved) return initialState;
 	try {
-		return { ...initialState, ...JSON.parse(saved) };
+		const parsed = { ...initialState, ...JSON.parse(saved) };
+
+		// Migrate legacy investment filter values that assumed small non-IDR numbers.
+		if (
+			typeof parsed.maxInvestment === 'number' &&
+			Number.isFinite(parsed.maxInvestment) &&
+			parsed.maxInvestment > 0 &&
+			parsed.maxInvestment <= 100000
+		) {
+			parsed.maxInvestment = DEFAULT_MAX_INVESTMENT;
+		}
+
+		return parsed;
 	} catch (e) {
 		return initialState;
 	}

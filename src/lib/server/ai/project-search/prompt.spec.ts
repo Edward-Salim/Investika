@@ -24,6 +24,29 @@ describe('buildProjectSearchPrompt', () => {
 		expect(prompt).not.toContain('"column":');
 	});
 
+	it('forces numeric investment metrics to use normalized number fields instead of raw text fields', () => {
+		const prompt = buildProjectSearchPrompt('proyek dengan investasi dan irr tertinggi');
+
+		expect(prompt).toContain(
+			'For investment value, NPV, and IRR constraints or ranking, use only these normalized numeric fields: investment_opportunities.nilai_investasi_amount, investment_opportunities.nilai_npv_amount, and investment_opportunities.nilai_irr_percent.'
+		);
+		expect(prompt).toContain(
+			'Never use these raw text display fields for numeric filtering or sorting: investment_opportunities.nilai_investasi, investment_opportunities.nilai_npv, or investment_opportunities.nilai_irr.'
+		);
+		expect(prompt).toContain(
+			'Treat investment value and NPV amounts as IDR by default unless the user explicitly asks for another currency or conversion behavior.'
+		);
+		expect(prompt).toContain(
+			'This is the numeric field for investment value filters and sorting. Treat the amount as IDR by default unless the user explicitly asks for another currency or conversion behavior. Do not use the raw text field investment_opportunities.nilai_investasi for numeric logic.'
+		);
+		expect(prompt).toContain(
+			'This is the numeric field for IRR filters and sorting. Do not use the raw text field investment_opportunities.nilai_irr for numeric logic.'
+		);
+		expect(prompt).toContain(
+			'This is the numeric field for NPV filters and sorting. Treat the amount as IDR by default unless the user explicitly asks for another currency or conversion behavior. Do not use the raw text field investment_opportunities.nilai_npv for numeric logic.'
+		);
+	});
+
 	it('makes the join shape explicit', () => {
 		const prompt = buildProjectSearchPrompt('proyek di Jawa dengan irr tertinggi');
 
