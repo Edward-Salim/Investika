@@ -32,7 +32,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 						 pathname === '/ja' ||
 						 pathname === '/ko' ||
 						 pathname.endsWith('/login') || 
-						 pathname.includes('/api/auth') || 
+						 pathname.startsWith('/api/') || 
 						 pathname.includes('.') || // Static files
 						 pathname.startsWith('/_app');
 
