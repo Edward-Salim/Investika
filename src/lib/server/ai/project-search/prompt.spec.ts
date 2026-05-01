@@ -9,6 +9,7 @@ describe('buildProjectSearchPrompt', () => {
 		expect(prompt).toContain('adm_provinces');
 		expect(prompt).toContain('Always return project-search plans');
 		expect(prompt).toContain('Do not output SQL');
+		expect(prompt).toContain('Do not invent schema fields, joins, operators, enum members, status labels, sector names, or coded status meanings.');
 		expect(prompt).toContain('energy projects in Sulawesi');
 	});
 
@@ -30,5 +31,23 @@ describe('buildProjectSearchPrompt', () => {
 		expect(prompt).toContain('Never use "table", "on", "left", "right", "sql", or any custom join condition keys.');
 		expect(prompt).toContain('{ "from": "investment_opportunities", "to": "adm_provinces" }');
 		expect(prompt).toContain('{ "table": "adm_provinces", "on": "investment_opportunities.id_adm_provinsi = adm_provinces.id_adm_provinsi" }');
+	});
+
+	it('documents enum members and usage rules for categorical fields', () => {
+		const prompt = buildProjectSearchPrompt('ipro projects in tourism');
+
+		expect(prompt).toContain('investment_opportunities.status [enum_text]');
+		expect(prompt).toContain('Allowed values: PID, PPI, IPRO.');
+		expect(prompt).toContain('PID is a regional investment profile that describes a region and its business environment.');
+		expect(prompt).toContain('IPRO is an investment project ready to offer, typically the most execution-ready category.');
+		expect(prompt).toContain('investment_opportunities.status_proyek [enum_text]');
+		expect(prompt).toContain('Allowed values: RE/PUBLISH, DIMINATI.');
+		expect(prompt).toContain('investment_opportunities.nama_sektor_peluang [categorical_text]');
+		expect(prompt).toContain('Text values are inconsistent in casing and naming. Prefer ilike.');
+		expect(prompt).toContain('Primer refers to natural-resource extraction sectors such as agriculture, fisheries, plantations, forestry, and mining.');
+		expect(prompt).toContain('Sekunder refers to manufacturing, industrial processing, and value-added production.');
+		expect(prompt).toContain('Tersier refers to service sectors such as tourism, logistics, finance, health, education, and digital services.');
+		expect(prompt).toContain('investment_opportunities.project_status_enum [coded_text]');
+		expect(prompt).toContain('Avoid using this field unless the user explicitly refers to the raw codes.');
 	});
 });

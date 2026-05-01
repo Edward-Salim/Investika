@@ -1,9 +1,10 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
+	import { browser } from '$app/environment';
 	import { Zap, ArrowRight, MapPin, DollarSign, SlidersHorizontal, X, ChevronDown, Check, Home, Bot, Search, ChevronUp, LayoutGrid, Truck, Sprout, Cpu, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope, RotateCcw, Image, Paperclip } from 'lucide-svelte';
 	import { fade, fly, slide } from 'svelte/transition';
 	import { cubicOut, cubicInOut } from 'svelte/easing';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import bkpmEmblem from '$lib/assets/logos/bkpm-emblem.png';
 	import AuroraBackground from '$lib/components/AuroraBackground.svelte';
 	import { searchStore } from '$lib/state/search.svelte.js';
@@ -39,6 +40,7 @@
 	let catalogSearchResults = $state<PageData['projects']>([]);
 	let loadMoreSentinel = $state<HTMLDivElement | null>(null);
 	let loadMoreObserver: IntersectionObserver | null = null;
+	let resultsScrollContainer = $state<HTMLDivElement | null>(null);
 
 	$effect(() => {
 		if (catalogProjects.length === 0 && serverProjects.length > 0) {
@@ -52,8 +54,12 @@
 			const storedResults = Array.isArray(searchStore.displayedProjects)
 				? (searchStore.displayedProjects as PageData['projects'])
 				: [];
+			const hasSearchContext =
+				searchStore.isLoading ||
+				committedSearch.trim().length > 0 ||
+				aiSummary.trim().length > 0;
 
-			if (storedResults.length > 0) {
+			if (storedResults.length > 0 || hasSearchContext) {
 				displayedProjects = storedResults;
 				return;
 			}
@@ -70,6 +76,7 @@
 	});
 
 	$effect(() => {
+		if (!browser) return;
 		if (viewMode !== 'catalog') return;
 
 		const query = committedSearch.trim();
@@ -397,6 +404,8 @@
 			.filter((p: any) => {
 				const matchesSearch = (viewMode === 'catalog' && normalizedCommittedSearch)
 					? true
+					: viewMode === 'search'
+						? true
 					: !normalizedCommittedSearch ||
 					p.title.toLowerCase().includes(normalizedCommittedSearch) ||
 					p.category.toLowerCase().includes(normalizedCommittedSearch) ||
@@ -503,6 +512,8 @@
 				? payload.summary.trim()
 				: m.home_ai_results_count({ count: displayedProjects.length });
 			inputValue = '';
+			await tick();
+			resultsScrollContainer?.scrollTo({ top: 0, behavior: 'smooth' });
 		} catch {
 			catalogProjects = serverProjects;
 			displayedProjects = serverProjects;
@@ -517,6 +528,12 @@
 				isAiSummaryExpanded = false;
 			}, 6000);
 		}
+	}
+
+	function handleSearchKeydown(event: KeyboardEvent) {
+		if (event.key !== 'Enter' || event.shiftKey || event.isComposing) return;
+		event.preventDefault();
+		void handleSearch();
 	}
 
 
@@ -587,7 +604,7 @@
 					<button type="button" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0" title={m.home_attach_file()}><Paperclip size={18} strokeWidth={2.5} /></button><textarea
 						use:autosize
 						bind:value={inputValue}
-						onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSearch())}
+						onkeydown={handleSearchKeydown}
 						placeholder={m.home_placeholder()}
 						class="flex-1 resize-none border-0 bg-transparent pl-2 pr-4 py-3 text-sm font-semibold text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-0 min-h-[48px] max-h-[96px] overflow-y-auto scrollbar-hide break-words"
 						style="word-break: break-word; overflow-wrap: anywhere;"
@@ -624,6 +641,7 @@
 
 	<!-- SCROLLABLE: compact header + project grid -->
 	<div
+		bind:this={resultsScrollContainer}
 		class="flex-1 overflow-y-auto px-6 md:px-10 pt-6 pb-2"
 		in:fly={{ y: 50, duration: 550, delay: 250, easing: cubicOut, opacity: 0 }}
 	>
@@ -938,7 +956,7 @@
 				<button type="button" class="ml-1 p-2 text-slate-300 hover:text-bkpm-blue hover:bg-slate-50 rounded-lg transition-colors cursor-pointer shrink-0" title={m.home_attach_file()}><Paperclip size={18} strokeWidth={2.5} /></button><textarea
 					use:autosize
 					bind:value={inputValue}
-					onkeydown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSearch())}
+					onkeydown={handleSearchKeydown}
 					placeholder={m.home_placeholder()}
 					class="flex-1 resize-none border-0 bg-transparent pl-2 pr-4 py-2.5 text-sm font-semibold text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-0 min-h-[40px] max-h-[96px] overflow-y-auto scrollbar-hide break-words"
 					style="word-break: break-word; overflow-wrap: anywhere;"

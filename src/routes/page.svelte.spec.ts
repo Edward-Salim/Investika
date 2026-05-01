@@ -1,4 +1,4 @@
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { resetSearchStore } from '$lib/state/search.svelte.js';
@@ -14,6 +14,17 @@ describe('+page.svelte', () => {
 		resetSearchStore();
 		window.localStorage.clear();
 	});
+
+	function renderHomePage(projects: any[] = []) {
+		render(HomePage, {
+			data: {
+				user: null,
+				session: null,
+				isProtoAuth: false,
+				projects
+			}
+		});
+	}
 
 	async function fillSearch(value: string) {
 		const input = page.getByRole('textbox').first();
@@ -58,31 +69,24 @@ describe('+page.svelte', () => {
 			})
 		});
 
-		render(HomePage, {
-			data: {
-				user: null,
-				session: null,
-				isProtoAuth: false,
-				projects: [
-					{
-						id: '1',
-						title: 'Existing Project',
-						category: 'Tourism',
-						status: 'Active',
-						location: 'Bali',
-						investment: '$10M',
-						npv: '$2M',
-						irr: '12%',
-						image: null,
-						provinceId: 51,
-						investmentNum: 10,
-						irrNum: 12,
-						npvNum: 2,
-						wilayah: null
-					}
-				]
+		renderHomePage([
+			{
+				id: '1',
+				title: 'Existing Project',
+				category: 'Tourism',
+				status: 'Active',
+				location: 'Bali',
+				investment: '$10M',
+				npv: '$2M',
+				irr: '12%',
+				image: null,
+				provinceId: 51,
+				investmentNum: 10,
+				irrNum: 12,
+				npvNum: 2,
+				wilayah: null
 			}
-		});
+		]);
 
 		await fillSearch('energy projects in Sulawesi');
 
@@ -97,14 +101,7 @@ describe('+page.svelte', () => {
 			json: async () => ({ error: 'boom' })
 		});
 
-		render(HomePage, {
-			data: {
-				user: null,
-				session: null,
-				isProtoAuth: false,
-				projects: []
-			}
-		});
+		renderHomePage();
 
 		await fillSearch('energy projects');
 
@@ -112,14 +109,7 @@ describe('+page.svelte', () => {
 	});
 
 	it('does not trigger a request for empty input', async () => {
-		render(HomePage, {
-			data: {
-				user: null,
-				session: null,
-				isProtoAuth: false,
-				projects: []
-			}
-		});
+		renderHomePage();
 
 		await fillSearch('   ');
 
@@ -152,35 +142,65 @@ describe('+page.svelte', () => {
 			})
 		});
 
-		render(HomePage, {
-			data: {
-				user: null,
-				session: null,
-				isProtoAuth: false,
-				projects: [
-					{
-						id: '1',
-						title: 'Existing Project',
-						category: 'Tourism',
-						status: 'Active',
-						location: 'Bali',
-						investment: '$10M',
-						npv: '$2M',
-						irr: '12%',
-						image: null,
-						provinceId: 51,
-						investmentNum: 10,
-						irrNum: 12,
-						npvNum: 2,
-						wilayah: null
-					}
-				]
+		renderHomePage([
+			{
+				id: '1',
+				title: 'Existing Project',
+				category: 'Tourism',
+				status: 'Active',
+				location: 'Bali',
+				investment: '$10M',
+				npv: '$2M',
+				irr: '12%',
+				image: null,
+				provinceId: 51,
+				investmentNum: 10,
+				irrNum: 12,
+				npvNum: 2,
+				wilayah: null
 			}
-		});
+		]);
 
 		await fillSearch('energy projects in Sulawesi');
 		await expect.element(page.getByText('Sulawesi Solar Hub')).toBeInTheDocument();
 		await page.getByTitle(/reset/i).click();
 		await expect.element(page.getByText('Existing Project')).toBeInTheDocument();
+	});
+
+	it('submits the homepage search with Enter', async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({
+				summary: 'Found one project.',
+				projects: []
+			})
+		});
+
+		renderHomePage();
+
+		const input = page.getByRole('textbox').first();
+		await input.click();
+		await input.fill('energy projects');
+		await userEvent.keyboard('{Enter}');
+
+		expect(mockFetch).toHaveBeenCalledWith('/api/ai-search-projects', expect.objectContaining({ method: 'POST' }));
+		await expect.element(page.getByText(/Found one project\./)).toBeInTheDocument();
+	});
+
+	it('stays in search mode when the AI returns no matching projects', async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({
+				summary: 'No matching projects found.',
+				projects: []
+			})
+		});
+
+		renderHomePage();
+
+		await fillSearch('unknown query');
+
+		await expect.element(page.getByText(/No matching projects found\./)).toBeInTheDocument();
+		await expect.element(page.getByText(/no results/i)).toBeInTheDocument();
 	});
 });
