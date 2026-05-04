@@ -1,6 +1,7 @@
 import { page, userEvent } from 'vitest/browser';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { bookmarkStore } from '$lib/state/bookmark.svelte';
 import { resetSearchStore } from '$lib/state/search.svelte.js';
 import HomePage from './+page.svelte';
 
@@ -12,6 +13,7 @@ describe('+page.svelte', () => {
 	beforeEach(() => {
 		mockFetch.mockReset();
 		resetSearchStore();
+		bookmarkStore.clear();
 		window.localStorage.clear();
 	});
 
@@ -21,7 +23,8 @@ describe('+page.svelte', () => {
 				user: null,
 				session: null,
 				isProtoAuth: false,
-				projects
+				projects,
+				totalProjects: projects.length
 			}
 		});
 	}
@@ -90,7 +93,10 @@ describe('+page.svelte', () => {
 
 		await fillSearch('energy projects in Sulawesi');
 
-		expect(mockFetch).toHaveBeenCalledWith('/api/ai-search-projects', expect.objectContaining({ method: 'POST' }));
+		expect(mockFetch).toHaveBeenCalledWith(
+			'/api/ai-search-projects',
+			expect.objectContaining({ method: 'POST' })
+		);
 		await expect.element(page.getByText(/Found energy projects in Sulawesi\./)).toBeInTheDocument();
 		await expect.element(page.getByText('Sulawesi Solar Hub')).toBeInTheDocument();
 	});
@@ -183,7 +189,10 @@ describe('+page.svelte', () => {
 		await input.fill('energy projects');
 		await userEvent.keyboard('{Enter}');
 
-		expect(mockFetch).toHaveBeenCalledWith('/api/ai-search-projects', expect.objectContaining({ method: 'POST' }));
+		expect(mockFetch).toHaveBeenCalledWith(
+			'/api/ai-search-projects',
+			expect.objectContaining({ method: 'POST' })
+		);
 		await expect.element(page.getByText(/Found one project\./)).toBeInTheDocument();
 	});
 
@@ -201,6 +210,66 @@ describe('+page.svelte', () => {
 		await fillSearch('unknown query');
 
 		await expect.element(page.getByText(/No matching projects found\./)).toBeInTheDocument();
-		await expect.element(page.getByText(/no results/i)).toBeInTheDocument();
+		await expect.element(page.getByText(/AI found no matching projects/i)).toBeInTheDocument();
+		await expect
+			.element(page.getByText(/No project matched your AI search criteria\./i))
+			.toBeInTheDocument();
+		await expect.element(page.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
+	});
+
+	it('can filter the catalog to bookmarked projects only', async () => {
+		const existingProject = {
+			id: '1',
+			title: 'Existing Project',
+			category: 'Tourism',
+			status: 'Active',
+			location: 'Bali',
+			investment: '$10M',
+			npv: '$2M',
+			irr: '12%',
+			image: null,
+			provinceId: 51,
+			investmentNum: 10,
+			irrNum: 12,
+			npvNum: 2,
+			wilayah: null
+		};
+		const bookmarkedProject = {
+			id: '2',
+			title: 'Sulawesi Solar Hub',
+			category: 'Energy',
+			status: 'Ready to Offer',
+			location: 'Central Sulawesi',
+			investment: '$120M',
+			npv: '$40M',
+			irr: '18%',
+			image: null,
+			provinceId: 72,
+			investmentNum: 120,
+			irrNum: 18,
+			npvNum: 40,
+			wilayah: null
+		};
+
+		bookmarkStore.projects = [bookmarkedProject];
+		bookmarkStore.save();
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: async () => ({ projects: [], hasMore: false })
+		});
+
+		renderHomePage([existingProject, bookmarkedProject]);
+
+		await page.getByRole('button', { name: /browse catalog/i }).click();
+		await page
+			.getByRole('button', { name: /bookmarked only/i })
+			.first()
+			.click();
+
+		await expect.element(page.getByText('Sulawesi Solar Hub')).toBeInTheDocument();
+		await expect.element(page.getByText('Existing Project')).not.toBeInTheDocument();
+		expect(window.localStorage.getItem('investika_bookmarked_projects')).toContain(
+			'Sulawesi Solar Hub'
+		);
 	});
 });

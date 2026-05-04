@@ -1,6 +1,21 @@
 <script lang="ts">
-	import { Image, MapPin, Zap, Palmtree, Factory, Waves, Pickaxe, Building2, ShoppingBag, Briefcase, Construction, Stethoscope } from 'lucide-svelte';
+	import {
+		Bookmark,
+		Image,
+		MapPin,
+		Zap,
+		Palmtree,
+		Factory,
+		Waves,
+		Pickaxe,
+		Building2,
+		ShoppingBag,
+		Briefcase,
+		Construction,
+		Stethoscope
+	} from 'lucide-svelte';
 	import { compareStore } from '$lib/state/compare.svelte';
+	import { bookmarkStore } from '$lib/state/bookmark.svelte';
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
 	import { formatCurrency } from '$lib/utils/currency';
@@ -18,7 +33,7 @@
 			npv: string;
 			irr: string;
 			provinceId?: number | null;
-		},
+		};
 		hideLocation?: boolean;
 	}>();
 
@@ -34,22 +49,23 @@
 	}
 
 	const categoryIcons: Record<string, any> = {
-		'Infrastructure': Construction,
-		'Energy': Zap,
-		'Manufacturing': Factory,
-		'Tourism': Palmtree,
-		'Healthcare': Stethoscope,
-		'Mining': Pickaxe,
-		'Property': Building2,
-		'Retail': ShoppingBag,
-		'Services': Briefcase,
-		'Fisheries': Waves
+		Infrastructure: Construction,
+		Energy: Zap,
+		Manufacturing: Factory,
+		Tourism: Palmtree,
+		Healthcare: Stethoscope,
+		Mining: Pickaxe,
+		Property: Building2,
+		Retail: ShoppingBag,
+		Services: Briefcase,
+		Fisheries: Waves
 	};
 
 	const capexDisplay = $derived(formatCurrency(project.capex || project.investment));
 	const npvDisplay = $derived(formatCurrency(project.npv));
 
 	const isCompared = $derived(compareStore.isCompared(project.id));
+	const isBookmarked = $derived(bookmarkStore.isBookmarked(project.id));
 </script>
 
 <a
@@ -57,7 +73,9 @@
 	class="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-200 hover:shadow-lg"
 >
 	<!-- Image strip -->
-	<div class="aspect-video w-full overflow-hidden bg-slate-50 relative flex items-center justify-center">
+	<div
+		class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-slate-50"
+	>
 		{#if project.image}
 			<img
 				src={safeUrl(project.image)}
@@ -70,26 +88,54 @@
 		{:else}
 			<div class="flex flex-col items-center gap-2 text-slate-300">
 				<Image size={24} strokeWidth={1.5} />
-				<span class="text-[8px] font-black uppercase tracking-widest">{m.card_no_preview()}</span>
+				<span class="text-[8px] font-black tracking-widest uppercase">{m.card_no_preview()}</span>
 			</div>
 		{/if}
 
 		<!-- Subtle gradient at bottom for badge contrast -->
-		<div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none"></div>
+		<div
+			class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"
+		></div>
+
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			onclick={(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				bookmarkStore.toggle(project);
+			}}
+			class="absolute top-3 left-3 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 shadow-sm transition-colors duration-200 hover:border-bkpm-blue/30 hover:bg-white"
+			title={isBookmarked ? m.card_bookmark_remove() : m.card_bookmark_add()}
+			aria-label={isBookmarked ? m.card_bookmark_remove() : m.card_bookmark_add()}
+			role="button"
+			tabindex="0"
+		>
+			<Bookmark
+				size={15}
+				strokeWidth={2.4}
+				class={isBookmarked ? 'text-bkpm-blue' : 'text-slate-500'}
+				fill={isBookmarked ? 'currentColor' : 'none'}
+			/>
+		</div>
 
 		<!-- Top-right: status badge (IPRO / PPI) + sector icon -->
 		<div class="absolute top-3 right-3 z-10 flex items-center gap-1.5">
 			{#if project.status}
-				<div class="flex h-7 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 px-2.5 shadow-sm">
-					<span class="text-[8px] font-black text-bkpm-blue uppercase tracking-tight">
+				<div
+					class="flex h-7 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 px-2.5 shadow-sm"
+				>
+					<span class="text-[8px] font-black tracking-tight text-bkpm-blue uppercase">
 						{project.status}
 					</span>
 				</div>
 			{/if}
 			{#if project.category}
 				{@const catKey = 'cat_' + project.category.toLowerCase()}
-				<div class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 shadow-sm" 
-					 title={(m as any)[catKey] ? (m as any)[catKey]() : project.category}>
+				<div
+					class="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200/80 bg-white/95 shadow-sm"
+					title={(m as any)[catKey] ? (m as any)[catKey]() : project.category}
+				>
 					{#if categoryIcons[project.category]}
 						{@const Icon = categoryIcons[project.category]}
 						<Icon size={13} strokeWidth={2.5} class="text-bkpm-blue" />
@@ -100,34 +146,42 @@
 			{/if}
 		</div>
 
-		<!-- Bottom-left: Horizontal bookmark tag -->
+		<!-- Bottom-left: compare tag -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			onclick={(e) => { 
-				e.preventDefault(); 
+			onclick={(e) => {
+				e.preventDefault();
 				e.stopPropagation();
-				e.stopImmediatePropagation();
-				compareStore.toggle(project); 
+				compareStore.toggle(project);
 			}}
-			class="group/bm absolute bottom-4 left-0 z-20 flex flex-col items-center cursor-pointer transition-colors duration-200"
-			title={isCompared ? m.card_tooltip_remove() : compareStore.limitReached ? m.card_tooltip_max() : m.card_tooltip_add()}
+			class="group/bm absolute bottom-4 left-0 z-20 flex cursor-pointer flex-col items-center transition-colors duration-200"
+			title={isCompared
+				? m.card_tooltip_remove()
+				: compareStore.limitReached
+					? m.card_tooltip_max()
+					: m.card_tooltip_add()}
+			aria-label={isCompared
+				? m.card_tooltip_remove()
+				: compareStore.limitReached
+					? m.card_tooltip_max()
+					: m.card_tooltip_add()}
 			role="button"
 			tabindex="0"
 		>
 			<div
-				class="flex h-7 items-center rounded-r-full border border-slate-200/80 pl-3 pr-4 text-[9px] font-black uppercase tracking-wide shadow-sm transition-colors duration-200 select-none
+				class="flex h-7 items-center rounded-r-full border border-slate-200/80 pr-4 pl-3 text-[9px] font-black tracking-wide uppercase shadow-sm transition-colors duration-200 select-none
 					{isCompared
+					? 'text-white'
+					: compareStore.limitReached
 						? 'text-white'
-						: compareStore.limitReached
-							? 'text-white'
-							: 'text-slate-600 group-hover/bm:text-bkpm-blue'}"
+						: 'text-slate-600 group-hover/bm:text-bkpm-blue'}"
 				style="
 					background: {isCompared
-						? '#1755CF'
-						: compareStore.limitReached
-							? '#ef4444'
-							: 'rgba(255,255,255,0.96)'};
+					? '#1755CF'
+					: compareStore.limitReached
+						? '#ef4444'
+						: 'rgba(255,255,255,0.96)'};
 				"
 			>
 				{#if isCompared}
@@ -141,16 +195,19 @@
 		</div>
 	</div>
 
-	<div class="p-4 flex flex-col flex-1">
-		<h3 class="text-base font-black text-slate-900 leading-tight mb-1 group-hover:text-bkpm-blue transition-colors line-clamp-2" title={project.title}>
+	<div class="flex flex-1 flex-col p-4">
+		<h3
+			class="mb-1 line-clamp-2 text-base leading-tight font-black text-slate-900 transition-colors group-hover:text-bkpm-blue"
+			title={project.title}
+		>
 			{project.title}
 		</h3>
 
 		{#if !hideLocation && project.location}
-			<span 
-				onclick={(e) => { 
-					e.preventDefault(); 
-					e.stopPropagation(); 
+			<span
+				onclick={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
 					if (project.provinceId) {
 						goto(`/regions?id=${project.provinceId}`);
 					}
@@ -164,7 +221,7 @@
 						}
 					}
 				}}
-				class="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-2 hover:text-bkpm-blue transition-colors cursor-pointer text-left w-fit"
+				class="mb-2 flex w-fit cursor-pointer items-center gap-1 text-left text-[10px] font-bold text-slate-400 transition-colors hover:text-bkpm-blue"
 				role="button"
 				tabindex="0"
 			>
@@ -173,22 +230,30 @@
 			</span>
 		{/if}
 
-		<div class="grid grid-cols-3 gap-2 pt-3 border-t border-slate-50 mt-auto">
+		<div class="mt-auto grid grid-cols-3 gap-2 border-t border-slate-50 pt-3">
 			<div>
-				<div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{m.card_label_capex()}</div>
-				<div class="text-[10px] font-black text-slate-900 truncate" title={capexDisplay}>
+				<div class="mb-1 text-[9px] font-bold tracking-widest text-slate-400 uppercase">
+					{m.card_label_capex()}
+				</div>
+				<div class="truncate text-[10px] font-black text-slate-900" title={capexDisplay}>
 					{capexDisplay}
 				</div>
 			</div>
 			<div>
-				<div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{m.card_label_npv()}</div>
-				<div class="text-[10px] font-black text-slate-900 truncate" title={npvDisplay}>
+				<div class="mb-1 text-[9px] font-bold tracking-widest text-slate-400 uppercase">
+					{m.card_label_npv()}
+				</div>
+				<div class="truncate text-[10px] font-black text-slate-900" title={npvDisplay}>
 					{npvDisplay}
 				</div>
 			</div>
 			<div>
-				<div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{m.card_label_irr()}</div>
-				<div class="text-[10px] font-black text-logo-green truncate" title={project.irr}>{project.irr}</div>
+				<div class="mb-1 text-[9px] font-bold tracking-widest text-slate-400 uppercase">
+					{m.card_label_irr()}
+				</div>
+				<div class="truncate text-[10px] font-black text-logo-green" title={project.irr}>
+					{project.irr}
+				</div>
 			</div>
 		</div>
 	</div>
