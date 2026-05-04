@@ -1,13 +1,21 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
-	import { Bot, Briefcase, Zap, AlertTriangle, CheckCircle2, ChevronRight, TrendingUp, Anchor, Factory, MapPin, Building2, Construction, Sprout, Waves, Cpu, Palmtree, Stethoscope, Pickaxe, ShoppingBag, Truck, Download, Plus, ShieldCheck, Target, Activity } from 'lucide-svelte';
+	import { Bot, Briefcase, Zap, ChevronRight, TrendingUp, Factory, Building2, Construction, Sprout, Waves, Cpu, Palmtree, Stethoscope, Pickaxe, ShoppingBag, Truck, Download, Plus, ShieldCheck, Target, Activity } from 'lucide-svelte';
 	import { fade } from 'svelte/transition';
 	import { compareStore } from '$lib/state/compare.svelte';
 	import ProjectCard from '$lib/components/ProjectCard.svelte';
 	import vestiAICompare from '$lib/assets/logos/vestiAI-compare.png';
 	import { formatCurrency } from '$lib/utils/currency';
-	
-	let { data } = $props();
+	import { getLocale } from '$lib/paraglide/runtime.js';
+
+	type CompareAnalysis = {
+		summary: string;
+		keyTakeaways: [string, string];
+		synergySummary: string;
+		averageIrr: number | null;
+		recommendedProjectId: string | null;
+	};
+
 	const normalizeProject = (p: any, i: number) => {
 		// If it's from the store, it already has the 'title' property formatted for ProjectCard
 		if (p.title !== undefined) {
@@ -77,6 +85,33 @@
 
 	let hasSelection = $derived(favorites.length > 0);
 	let totalCapex = $derived(favorites.reduce((sum, p) => sum + (p.investmentNum || 0), 0));
+	let comparePayload = $derived(
+		favorites.map((project) => ({
+			id: project.id,
+			title: project.title,
+			category: project.category,
+			location: project.location,
+			province: project.province,
+			city: project.city,
+			status: project.status,
+			agency: project.agency,
+			scheme: project.scheme,
+			landArea: project.landArea,
+			kbli: project.kbli,
+			capex: project.capex,
+			investment: project.investment,
+			irr: project.irr,
+			npv: project.npv,
+			payback: project.payback,
+			docStatus: project.docStatus,
+			isPsn: project.isPsn,
+			isKek: project.isKek,
+			riskLabel: project.riskLabel,
+			investmentNum: project.investmentNum,
+			irrNum: project.irrNum,
+			npvNum: project.npvNum
+		}))
+	);
 
 	const categoryIcons: Record<string, any> = {
 		'Energy': Zap,
@@ -96,19 +131,85 @@
 		'Services': Briefcase
 	};
 
-	let isAnalyzing = $state(true);
-	
-	// Simulate AI "thinking" delay
+	let compareAnalysis = $state<CompareAnalysis | null>(null);
+	let isAnalyzing = $state(false);
+	let analysisRequestId = 0;
+
+	let fallbackAverageIrr = $derived.by(() => {
+		const projectsWithIrr = favorites.filter(
+			(project) => typeof project.irrNum === 'number' && Number.isFinite(project.irrNum)
+		);
+
+		if (projectsWithIrr.length === 0) return null;
+
+		const totalIrr = projectsWithIrr.reduce((sum, project) => sum + project.irrNum, 0);
+		return Number((totalIrr / projectsWithIrr.length).toFixed(1));
+	});
+
+	let displayAverageIrr = $derived(compareAnalysis?.averageIrr ?? fallbackAverageIrr);
+
 	$effect(() => {
-		const timer = setTimeout(() => {
+		if (comparePayload.length === 0) {
+			compareAnalysis = null;
 			isAnalyzing = false;
-		}, 2000);
-		return () => clearTimeout(timer);
+			return;
+		}
+
+		const requestId = ++analysisRequestId;
+		isAnalyzing = true;
+
+		void (async () => {
+			try {
+				const response = await fetch('/api/ai-compare-projects', {
+					method: 'POST',
+					headers: {
+						'content-type': 'application/json'
+					},
+					body: JSON.stringify({
+						locale: getLocale(),
+						projects: comparePayload
+					})
+				});
+
+				const payload = await response.json().catch(() => null);
+				if (!response.ok || !payload) {
+					throw new Error('AI compare failed');
+				}
+
+				if (requestId !== analysisRequestId) return;
+
+				if (
+					typeof payload.summary === 'string' &&
+					Array.isArray(payload.keyTakeaways) &&
+					payload.keyTakeaways.length >= 2 &&
+					typeof payload.synergySummary === 'string'
+				) {
+					compareAnalysis = {
+						summary: payload.summary.trim(),
+						keyTakeaways: [payload.keyTakeaways[0].trim(), payload.keyTakeaways[1].trim()],
+						synergySummary: payload.synergySummary.trim(),
+						averageIrr: typeof payload.averageIrr === 'number' ? payload.averageIrr : null,
+						recommendedProjectId:
+							typeof payload.recommendedProjectId === 'string'
+								? payload.recommendedProjectId
+								: null
+					};
+				}
+			} catch (error) {
+				console.error('Failed to analyze project comparison:', error);
+				if (requestId !== analysisRequestId) return;
+				compareAnalysis = null;
+			} finally {
+				if (requestId === analysisRequestId) {
+					isAnalyzing = false;
+				}
+			}
+		})();
 	});
 </script>
 
 <svelte:head>
-	<title>AI Portfolio Comparison | Investika</title>
+	<title>{m.comp_title()} | Investika</title>
 </svelte:head>
 
 <div class="h-full bg-slate-50/50 flex flex-col">
@@ -141,11 +242,16 @@
 						<div class="max-w-2xl">
 							<div class="space-y-3 text-xs text-slate-600 leading-relaxed font-medium">
 								<p>
-									{m.comp_ai_summary_1({ project: favorites[0]?.title || 'Selected Project' })}
+									{compareAnalysis?.summary || m.comp_ai_summary_1({ project: favorites[0]?.title || 'Selected Project' })}
 								</p>
 								<p>
-									{m.comp_ai_summary_2({ project: favorites[1]?.title || 'Selected Project' })}
+									{compareAnalysis?.keyTakeaways[0] || m.comp_ai_summary_2({ project: favorites[1]?.title || 'Selected Project' })}
 								</p>
+								{#if compareAnalysis?.keyTakeaways[1]}
+									<p>
+										{compareAnalysis.keyTakeaways[1]}
+									</p>
+								{/if}
 							</div>
 
 							<div class="mt-6 flex flex-wrap gap-3 relative z-20">
@@ -158,13 +264,17 @@
 								<div class="flex items-center gap-2 px-3 py-1.5 bg-slate-950/5 rounded-xl border border-slate-950/5">
 									<ShieldCheck size={14} class="text-slate-400" />
 									<span class="text-[10px] font-black uppercase tracking-widest text-slate-400">{m.comp_pill_synergy()}</span>
-									<span class="text-[10px] font-black text-slate-900">High G2G</span>
+									<span class="text-[10px] font-black text-slate-900">
+										{compareAnalysis?.synergySummary || 'TBD'}
+									</span>
 								</div>
 								
 								<div class="flex items-center gap-2 px-3 py-1.5 bg-slate-950/5 rounded-xl border border-slate-950/5">
 									<Activity size={14} class="text-slate-400" />
 									<span class="text-[10px] font-black uppercase tracking-widest text-slate-400">{m.comp_pill_irr()}</span>
-									<span class="text-[10px] font-black text-slate-900">~14.5%</span>
+									<span class="text-[10px] font-black text-slate-900">
+										{displayAverageIrr !== null ? `~${displayAverageIrr}%` : 'TBD'}
+									</span>
 								</div>
 							</div>
 						</div>
